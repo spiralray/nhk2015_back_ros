@@ -70,10 +70,10 @@ int main(int argc, char *argv[])
 
   signal(SIGINT,sigint_handler);
 
-  libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  libfreenect2::SyncMultiFrameListener listener(/*libfreenect2::Frame::Color | */libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
   libfreenect2::FrameMap frames;
 
-  dev->setColorFrameListener(&listener);
+  //dev->setColorFrameListener(&listener);
   dev->setIrAndDepthFrameListener(&listener);
   dev->start();
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
   while(!shutdown)
   {
     listener.waitForNewFrame(frames);
-    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+    //libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
