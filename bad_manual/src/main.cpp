@@ -37,7 +37,7 @@ private:
 
 Machine::Machine()
 {
-	swing_pub = mh.advertise<std_msgs::Int32>("mb1/swing", 1);
+	swing_pub = mh.advertise<std_msgs::Float32>("mb1/swing", 1);
 	joy_sub = mh.subscribe<sensor_msgs::Joy>("joy", 10, &Machine::joyCallback, this);
 
 	motor1_pub = mh.advertise<std_msgs::Float32>("/omni/motor1", 1);
@@ -51,9 +51,12 @@ Machine::Machine()
 void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
 
-	std_msgs::Int32 swing;
+	std_msgs::Float32 swing;
 
-	swing.data = joy->buttons[PS3_BUTTON_ACTION_SQUARE];
+	if(joy->buttons[PS3_BUTTON_ACTION_SQUARE]) swing.data = 0.5f;
+	else if(joy->buttons[PS3_BUTTON_ACTION_TRIANGLE]) swing.data = 1.0f;
+	else  swing.data = 0.0f;
+
 	swing_pub.publish(swing);
 
 	float joyx = - joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
