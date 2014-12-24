@@ -10,6 +10,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wuninitialized -Winit-self -Wunused-fun
 # Additional warnings
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Warray-bounds -Wtype-limits -Wreturn-type -Wsequence-point -Wparentheses -Wmissing-braces -Wchar-subscripts -Wswitch -Wwrite-strings -Wenum-compare -Wempty-body -Wlogical-op")
 
+ADD_DEFINITIONS(-DLIBFREENECT2_THREADING_STDLIB)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -124,7 +126,7 @@ add_executable(kinectv2 src/kinectv2.cpp)
  target_link_libraries(kinectv2
    ${catkin_LIBRARIES}
    freenect2
-   glfw
+   pthread
  )
 
 #############
