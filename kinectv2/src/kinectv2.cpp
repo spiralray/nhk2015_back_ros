@@ -38,39 +38,42 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 
-bool *sd;
+void thread_main( libfreenect2::Freenect2Device *dev );
 
-void sigint_handler(int s)
-{
-  *sd = true;
+bool sflag = false;
+
+int main(int argc, char** argv){
+	bool s;
+
+	ros::init(argc, argv, "kinectv2");
+
+	libfreenect2::Freenect2 freenect2;
+	libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
+
+	if(dev == 0)
+	{
+		std::cout << "no device connected or failure opening the default one!" << std::endl;
+		return -1;
+	}
+
+	pthread_t thread;
+	pthread_create( &thread, NULL, (void* (*)(void*))thread_main, dev );
+
+	ros::spin();
+
+	sflag = true;
+	pthread_join( thread, NULL );
+
+	dev->stop();
+	dev->close();
+
+	return 0;
 }
 
-int main(int argc, char *argv[])
-{
-  bool shutdown = false;
-  sd = &shutdown;
-  std::string program_path(argv[0]);
-  size_t executable_name_idx = program_path.rfind("Protonect");
+void thread_main( libfreenect2::Freenect2Device *dev ){
+  ROS_INFO("New thread Created.");
 
-  std::string binpath = "/";
-
-  if(executable_name_idx != std::string::npos)
-  {
-    binpath = program_path.substr(0, executable_name_idx);
-  }
-
-  libfreenect2::Freenect2 freenect2;
-  libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
-
-  if(dev == 0)
-  {
-    std::cout << "no device connected or failure opening the default one!" << std::endl;
-    return -1;
-  }
-
-  signal(SIGINT,sigint_handler);
-
-  libfreenect2::SyncMultiFrameListener listener(/*libfreenect2::Frame::Color | */libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  libfreenect2::SyncMultiFrameListener listener(/*libfreenect2::Frame::Color | libfreenect2::Frame::Ir | */libfreenect2::Frame::Depth);
   libfreenect2::FrameMap frames;
 
   //dev->setColorFrameListener(&listener);
@@ -80,43 +83,27 @@ int main(int argc, char *argv[])
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
-  ros::init(argc, argv, "kinectv2");
-
   ros::NodeHandle n;
   image_transport::ImageTransport it(n);
   image_transport::Publisher image_pub = it.advertise("kinect/depth", 1);
 
-  while(!shutdown)
+  while(!sflag)
   {
     listener.waitForNewFrame(frames);
     //libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-    libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
+    //libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
     //cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
     //cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-    cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
+    //cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
 
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f;
-
     depthMat.convertTo(depthMat, CV_16UC1, 65535.0f);
-
-    int key = cv::waitKey(1);
-    shutdown = shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-
     sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
     image_pub.publish(img_msg);
-
-    ros::spinOnce();
 
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
   }
-
-  // TODO: restarting ir stream doesn't work!
-  // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
-  dev->stop();
-  dev->close();
-
-  return 0;
 }
