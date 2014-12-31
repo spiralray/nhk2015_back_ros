@@ -55,7 +55,7 @@ int main(int argc, char **argv)
   cv::startWindowThread();
 
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber sub = it.subscribe("/kinect2_head/depth/image", 1, imageCallback);
+  image_transport::Subscriber sub = it.subscribe("/kinect/depth", 1, imageCallback);
 
   pthread_t thread;
   pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );

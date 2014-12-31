@@ -15,8 +15,9 @@ ADD_DEFINITIONS(-DLIBFREENECT2_THREADING_STDLIB)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+
+find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  OpenCV
   roscpp
   sensor_msgs
   cv_bridge

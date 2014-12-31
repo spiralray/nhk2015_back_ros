@@ -98,8 +98,8 @@ void thread_main( libfreenect2::Freenect2Device *dev ){
     //cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
     //cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
 
-    cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f;
-    depthMat.convertTo(depthMat, CV_16UC1, 65535.0f);
+    cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
+    depthMat.convertTo(depthMat, CV_16UC1, 1.0f);
     sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
     image_pub.publish(img_msg);
 
