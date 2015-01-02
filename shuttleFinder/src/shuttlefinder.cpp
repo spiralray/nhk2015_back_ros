@@ -218,7 +218,7 @@ void thread_main(){
 
 			//-------------------------------------------------------Check around the point
 
-#define MARGIN_AROUND	30
+#define MARGIN_AROUND	40
 
 			cv::Rect aroundRect;
 			aroundRect.x		= roi_rect.x-MARGIN_AROUND;
@@ -232,6 +232,8 @@ void thread_main(){
 			if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
 			if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
 
+			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
+
 			cv::Mat roi_around(depthMat, aroundRect);
 
 			for (int y = 0; y < aroundRect.height; y++)
@@ -239,11 +241,12 @@ void thread_main(){
 				for (int x = 0; x < aroundRect.width; x++)
 				{
 					int val = roi_around.at<unsigned short>(y,x);
-					if (val >= 0 && val < min)
+					//int val = depthMat.at<unsigned short>(aroundRect.y+y,aroundRect.x+x);
+					if (val > min && val < min+1000 )
 					{
 						geometry_msgs::Point p = DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
 						float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
-						if( dist_pow2 > 0.30*0.30 && dist_pow2 < 0.65*0.65 ){
+						if( dist_pow2 > 0.40f*0.40f && dist_pow2 < 0.8f*0.8f ){
 							goto not_shuttle;
 						}
 					}
