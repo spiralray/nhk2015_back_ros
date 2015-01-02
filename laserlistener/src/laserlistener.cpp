@@ -13,13 +13,12 @@
 
 //#define CV_PRINT
 
-#define IMAGE_WIDTH 1000
-#define IMAGE_HEIGHT 1000
-#define RHO_SCALE 70
+int image_size;
+int scale;
+int threshold;
 
 #define FIELD_WIDTH 8.420
 
-#define LINE_THRESHOLD 50
 
 #define DISTANCE_LRF_TO_CENTER 0.455	//[m]
 
@@ -52,6 +51,42 @@ int main(int argc, char** argv){
 
 	ros::init(argc, argv, "laserlistener");
 	ros::NodeHandle n;
+	ros::NodeHandle local_nh("~");
+
+	if (!local_nh.hasParam("image_size")){
+		ROS_INFO("Parameter image_size is not defined. Now, it is set default value.");
+		local_nh.setParam("image_size", 1000);
+	}
+
+	if (!local_nh.getParam("image_size", image_size)){
+		ROS_ERROR("parameter image_size is invalid.");
+		return -1;
+	}
+	ROS_INFO("image_size: %d",image_size);
+
+	if (!local_nh.hasParam("scale")){
+		ROS_INFO("Parameter scale is not defined. Now, it is set default value.");
+		local_nh.setParam("scale", 70);
+	}
+
+	if (!local_nh.getParam("scale", scale)){
+		ROS_ERROR("parameter scale is invalid.");
+		return -1;
+	}
+	ROS_INFO("scale: %d",scale);
+
+	if (!local_nh.hasParam("threshold")){
+		ROS_INFO("Parameter threshold is not defined. Now, it is set default value.");
+		local_nh.setParam("threshold", 60);
+	}
+
+	if (!local_nh.getParam("threshold", threshold)){
+		ROS_ERROR("parameter threshold is invalid.");
+		return -1;
+	}
+	ROS_INFO("threshold: %d",threshold);
+
+
 	ros::Subscriber subscriber = n.subscribe("scan", 100, LaserCallback);
 
 	pthread_t thread;
@@ -123,15 +158,15 @@ void thread_main(){
 
 
 		//メモリの確保
-		IplImage* img = cvCreateImage(cvSize(IMAGE_WIDTH,IMAGE_HEIGHT), IPL_DEPTH_8U, 3);
+		IplImage* img = cvCreateImage(cvSize(image_size,image_size), IPL_DEPTH_8U, 3);
 		cvSet(img, cvScalar(0,0,0));
 
 		float offset = -90*M_PI/180 + msg.angle_min;
 		int points = (msg.angle_max - msg.angle_min)/msg.angle_increment;
 		CvPoint pt1;
 		for(int i=0;i<points-1;i++){
-			pt1.x = IMAGE_WIDTH/2+(msg.ranges[i]*cos(offset+i*msg.angle_increment))*RHO_SCALE;
-			pt1.y = IMAGE_HEIGHT/2+(msg.ranges[i]*sin(offset+i*msg.angle_increment))*RHO_SCALE;
+			pt1.x = image_size/2+(msg.ranges[i]*cos(offset+i*msg.angle_increment))*scale;
+			pt1.y = image_size/2+(msg.ranges[i]*sin(offset+i*msg.angle_increment))*scale;
 			cvCircle(img, pt1 , 0, CV_RGB(255,255,255));
 		}
 
@@ -139,13 +174,13 @@ void thread_main(){
 		Line lines[100];
 		int linecount;
 
-		IplImage* bin = cvCreateImage(cvSize(IMAGE_WIDTH,IMAGE_HEIGHT), IPL_DEPTH_8U, 1);
+		IplImage* bin = cvCreateImage(cvSize(image_size,image_size), IPL_DEPTH_8U, 1);
 		cvCvtColor(img, bin, CV_BGR2GRAY);  //グレイスケール画像に変換
 
 		CvMemStorage* storage = cvCreateMemStorage(0);
 		CvSeq* cvLines = 0;
 
-		cvLines = cvHoughLines2( bin, storage, CV_HOUGH_STANDARD, 1, 0.5*CV_PI/180, LINE_THRESHOLD, 0, 0 );
+		cvLines = cvHoughLines2( bin, storage, CV_HOUGH_STANDARD, 1, 0.5*CV_PI/180, threshold, 0, 0 );
 
 		linecount = cvLines->total;
 
@@ -173,10 +208,10 @@ void thread_main(){
 			_c = -rho;
 
 			//the distance from center point to the line
-			double dist_px = abs(_a * IMAGE_WIDTH/2 + _b * IMAGE_HEIGHT/2 + _c) / sqrt( _a*_a + _b*_b );
+			double dist_px = abs(_a * image_size/2 + _b * image_size/2 + _c) / sqrt( _a*_a + _b*_b );
 
 			//距離がマイナス = 方向が逆
-			if( _a * IMAGE_WIDTH/2 + _b * IMAGE_HEIGHT/2 + _c < 0 ){
+			if( _a * image_size/2 + _b * image_size/2 + _c < 0 ){
 				theta -= CV_PI;
 			}
 
@@ -188,9 +223,8 @@ void thread_main(){
 			}
 
 
-			double dist = dist_px / RHO_SCALE;
+			double dist = dist_px / scale;
 
-			double theta_deg = theta*180/CV_PI;
 			//ROS_INFO("Hough:rho=%f theta=%f[deg]",dist, theta_deg);
 
 			geometry_msgs::Point p;
@@ -275,7 +309,7 @@ void thread_main(){
 		else			std::cout << " ";
 		std::cout << std::endl;
 #endif
-		double yaw_deg = yaw*180/CV_PI;
+		//double yaw_deg = yaw*180/CV_PI;
 		//ROS_INFO("yaw=%f[deg] x=%f[m] y=%f[m]",yaw_deg, pose.pose.position.x, pose.pose.position.y );
 
 		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(-yaw-M_PI/2);
