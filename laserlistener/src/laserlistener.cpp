@@ -50,7 +50,7 @@ void LaserCallback(const sensor_msgs::LaserScan& msg)
 
 int main(int argc, char** argv){
 
-	ros::init(argc, argv, "my_frame");
+	ros::init(argc, argv, "laserlistener");
 	ros::NodeHandle n;
 	ros::Subscriber subscriber = n.subscribe("scan", 100, LaserCallback);
 

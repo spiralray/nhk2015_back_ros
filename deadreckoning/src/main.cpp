@@ -123,7 +123,7 @@ void laserCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "listener");
+	ros::init(argc, argv, "deadreckoning");
 
 	ros::NodeHandle n;
 
