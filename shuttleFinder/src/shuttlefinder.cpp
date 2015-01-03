@@ -199,7 +199,7 @@ void thread_main(){
 			roi_rect.width = it->second->maxx - it->second->minx;
 			roi_rect.height = it->second->maxy - it->second->miny;
 
-			if( roi_rect.width > 50 ||  roi_rect.height > 50){	//Too large
+			if( roi_rect.width > 130 ||  roi_rect.height > 130){	//Too large
 				continue;
 			}
 
@@ -330,7 +330,7 @@ void thread_main(){
 			cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
 			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
-			if(nearest_p.x > 1.0f){
+			if(nearest_p.x > 0.6f){
 				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z, min );
 				points.points.push_back(nearest_p);
 

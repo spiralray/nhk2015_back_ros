@@ -75,6 +75,7 @@ public:
 			//ROS_INFO("%f %f %f %lf", accel.z, speed.z, last_speed.z, duration);
 
 			is_shuttle = true;
+
 			if(abs(speed.x) > 50){
 				is_shuttle = false;
 			}
@@ -84,7 +85,7 @@ public:
 			else if(abs(speed.z) > 50){
 				is_shuttle = false;
 			}
-
+#if 0
 			if(abs(accel.x) > 50){
 				is_shuttle = false;
 			}
@@ -94,7 +95,7 @@ public:
 			else if(abs(accel.z) > 50){
 				is_shuttle = false;
 			}
-
+#endif
 
 			//ROS_INFO("Update %f %f %f %f %f %f", location.point.x, location.point.y, location.point.z, speed.x, speed.y, speed.z);
 		}
