@@ -7,6 +7,7 @@
 #include <math.h>
 
 ros::Publisher marker_pub;
+ros::Publisher speed_pub, accel_pub;
 
 class Orbit{
 public:
@@ -20,11 +21,17 @@ public:
 	visualization_msgs::Marker shuttle_line;
 	geometry_msgs::PointStamped location;
 	geometry_msgs::Point speed, last_speed;
+	geometry_msgs::Point accel, last_accel;
+
+	bool is_shuttle;
 
 	Orbit(){
 
 		speed.x = speed.y = speed.z = 0;
 		last_speed.x = last_speed.y = last_speed.z = 0;
+
+		accel.x = accel.y = accel.z = 0;
+		last_accel.x = last_accel.y = last_accel.z = 0;
 
 		location.point.x = location.point.y = location.point.z = 0.0;
 		location.header.stamp.sec = 0;
@@ -39,8 +46,10 @@ public:
 
 		shuttle_line.scale.x = 0.03;
 
-		shuttle_line.color.g = 1.0;
+		shuttle_line.color.g = 0.5;
 		shuttle_line.color.a = 1.0;
+
+		is_shuttle = false;
 
 		//shuttle_line.lifetime = ros::Duration(0.2);
 
@@ -51,11 +60,45 @@ public:
 
 		if(duration > 0){
 			location.header.stamp = time;
-			speed.x = ((pose.position.x - location.point.x)-(speed.x - last_speed.x))/duration;
-			speed.y = ((pose.position.y - location.point.y)-(speed.y - last_speed.y))/duration;
-			speed.z = ((pose.position.z - location.point.z)-(speed.z - last_speed.z))/duration;
-			location.point = pose.position;
+
 			last_speed = speed;
+			last_accel = accel;
+
+			speed.x = (pose.position.x - location.point.x)/duration;
+			speed.y = (pose.position.y - location.point.y)/duration;
+			speed.z = (pose.position.z - location.point.z)/duration;
+			location.point = pose.position;
+
+			accel.x = (last_speed.x - speed.x) / duration;
+			accel.y = (last_speed.y - speed.y) / duration;
+			accel.z = (last_speed.z - speed.z) / duration;
+
+			//speed.x -= accel.x;
+			//speed.y -= accel.y;
+			speed.z -= accel.z;
+
+			is_shuttle = true;
+			if(abs(speed.x) > 50){
+				is_shuttle = false;
+			}
+			else if(abs(speed.y) > 50){
+				is_shuttle = false;
+			}
+			else if(abs(speed.z) > 50){
+				is_shuttle = false;
+			}
+
+			if(abs(accel.x) > 50){
+				is_shuttle = false;
+			}
+			else if(abs(accel.y) > 50){
+				is_shuttle = false;
+			}
+			else if(abs(accel.z) > 50){
+				is_shuttle = false;
+			}
+
+
 			//ROS_INFO("Update %f %f %f %f %f %f", location.point.x, location.point.y, location.point.z, speed.x, speed.y, speed.z);
 		}
 	}
@@ -111,7 +154,13 @@ void pointsCallback(const geometry_msgs::PoseArray& posearray)
 	if( !posearray.poses.empty() ){
 		orbit->update(posearray.header.stamp,posearray.poses.at(0));
 		orbit->calc();
-		marker_pub.publish(orbit->shuttle_line);
+
+		if( orbit->is_shuttle ){
+			marker_pub.publish(orbit->shuttle_line);
+
+			speed_pub.publish(orbit->speed);
+			accel_pub.publish(orbit->accel);
+		}
 	}
 }
 
@@ -122,6 +171,8 @@ int main(int argc, char **argv)
 
   orbit = new Orbit();
   marker_pub = n.advertise<visualization_msgs::Marker>("shuttle_line", 1000);
+  speed_pub = n.advertise<geometry_msgs::Point>("shuttle/speed", 10);
+  accel_pub = n.advertise<geometry_msgs::Point>("shuttle/accel", 10);
 
   ros::Subscriber subscriber = n.subscribe("shuttle_points", 100, pointsCallback);
 
