@@ -43,7 +43,6 @@ void thread_main( libfreenect2::Freenect2Device *dev );
 bool sflag = false;
 
 int main(int argc, char** argv){
-	bool s;
 
 	ros::init(argc, argv, "kinectv2");
 
@@ -73,10 +72,10 @@ int main(int argc, char** argv){
 void thread_main( libfreenect2::Freenect2Device *dev ){
   ROS_INFO("New thread Created.");
 
-  libfreenect2::SyncMultiFrameListener listener(/*libfreenect2::Frame::Color | libfreenect2::Frame::Ir | */libfreenect2::Frame::Depth);
+  libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
   libfreenect2::FrameMap frames;
 
-  //dev->setColorFrameListener(&listener);
+  dev->setColorFrameListener(&listener);
   dev->setIrAndDepthFrameListener(&listener);
   dev->start();
 
@@ -85,25 +84,37 @@ void thread_main( libfreenect2::Freenect2Device *dev ){
 
   ros::NodeHandle n;
   image_transport::ImageTransport it(n);
-  image_transport::Publisher image_pub = it.advertise("kinect/depth", 1);
+  image_transport::Publisher rgb_pub = it.advertise("kinect/rgb", 1);
+  image_transport::Publisher depth_pub = it.advertise("kinect/depth", 1);
+  image_transport::Publisher ir_pub = it.advertise("kinect/ir", 1);
 
   while(!sflag)
   {
     listener.waitForNewFrame(frames);
-    //libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-    //libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
+    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+    libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
     //cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
     //cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
     //cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
 
+    cv::Mat rgbMat = cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data);
+    sensor_msgs::ImagePtr rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgb8", rgbMat ).toImageMsg();
+    rgb_pub.publish(rgb_msg);
+
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
     depthMat.convertTo(depthMat, CV_16UC1, 1.0f);
-    sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
-    image_pub.publish(img_msg);
+    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
+    depth_pub.publish(depth_msg);
+
+    cv::Mat irMat = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f;
+    irMat.convertTo(irMat, CV_8UC1, 255.0f);
+    sensor_msgs::ImagePtr ir_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", irMat ).toImageMsg();
+    ir_pub.publish(ir_msg);
 
     listener.release(frames);
-    //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
+
+    //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(1));
   }
 }

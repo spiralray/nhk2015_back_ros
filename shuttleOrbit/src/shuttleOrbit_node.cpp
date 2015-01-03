@@ -19,11 +19,12 @@ public:
 
 	visualization_msgs::Marker shuttle_line;
 	geometry_msgs::PointStamped location;
-	geometry_msgs::Point speed;
+	geometry_msgs::Point speed, last_speed;
 
 	Orbit(){
 
 		speed.x = speed.y = speed.z = 0;
+		last_speed.x = last_speed.y = last_speed.z = 0;
 
 		location.point.x = location.point.y = location.point.z = 0.0;
 		location.header.stamp.sec = 0;
@@ -50,10 +51,11 @@ public:
 
 		if(duration > 0){
 			location.header.stamp = time;
-			speed.x = (pose.position.x - location.point.x)/duration;
-			speed.y = (pose.position.y - location.point.y)/duration;
-			speed.z = (pose.position.z - location.point.z)/duration;
+			speed.x = ((pose.position.x - location.point.x)-(speed.x - last_speed.x))/duration;
+			speed.y = ((pose.position.y - location.point.y)-(speed.y - last_speed.y))/duration;
+			speed.z = ((pose.position.z - location.point.z)-(speed.z - last_speed.z))/duration;
 			location.point = pose.position;
+			last_speed = speed;
 			//ROS_INFO("Update %f %f %f %f %f %f", location.point.x, location.point.y, location.point.z, speed.x, speed.y, speed.z);
 		}
 	}
@@ -64,18 +66,18 @@ public:
 		shuttle_line.points.clear();
 		shuttle_line.header.stamp = location.header.stamp;
 
-		geometry_msgs::Point last_point = location.point;
-		geometry_msgs::Point last_speed = speed;
+		geometry_msgs::Point _last_point = location.point;
+		geometry_msgs::Point _last_speed = speed;
 		geometry_msgs::Point _point, _speed;
 
 		for(double i=0; i < TIME_CALCULATE ; i+=dt){
 
-			double v = sqrt( last_speed.x*last_speed.x + last_speed.y*last_speed.y + last_speed.z*last_speed.z );	//speed of a shuttle
+			double v = sqrt( _last_speed.x*_last_speed.x + _last_speed.y*_last_speed.y + _last_speed.z*_last_speed.z );	//speed of a shuttle
 
 			double R = resist_coeff * v*v; //Air resistance
-			double Rx = -(last_speed.x/v)*R;
-			double Ry = -(last_speed.y/v)*R;
-			double Rz = -(last_speed.z/v)*R;
+			double Rx = -(_last_speed.x/v)*R;
+			double Ry = -(_last_speed.y/v)*R;
+			double Rz = -(_last_speed.z/v)*R;
 
 			double Fx = Rx;	//force
 			double Fy = Ry;
@@ -85,19 +87,19 @@ public:
 			double ay = Fy / mass;
 			double az = Fz / mass;
 
-			_speed.x = last_speed.x + ax*dt;
-			_speed.y = last_speed.y + ay*dt;
-			_speed.z = last_speed.z + az*dt;
+			_speed.x = _last_speed.x + ax*dt;
+			_speed.y = _last_speed.y + ay*dt;
+			_speed.z = _last_speed.z + az*dt;
 
-			_point.x = last_point.x + _speed.x*dt;
-			_point.y = last_point.y + _speed.y*dt;
-			_point.z = last_point.z + _speed.z*dt;
+			_point.x = _last_point.x + _speed.x*dt;
+			_point.y = _last_point.y + _speed.y*dt;
+			_point.z = _last_point.z + _speed.z*dt;
 
-			shuttle_line.points.push_back(last_point);
+			shuttle_line.points.push_back(_last_point);
 			shuttle_line.points.push_back(_point);
-			//printf("%f, %f, %f, %f,  %f, %f, %f,  %f, %f, %f\n", i, last_point.x, last_point.y, last_point.z, _point.x, _point.y, _point.z, last_speed.x, last_speed.y, last_speed.z);
-			last_point = _point;
-			last_speed = _speed;
+			//printf("%f, %f, %f, %f,  %f, %f, %f,  %f, %f, %f\n", i, _last_point.x, _last_point.y, _last_point.z, _point.x, _point.y, _point.z, _last_speed.x, _last_speed.y, _last_speed.z);
+			_last_point = _point;
+			_last_speed = _speed;
 		}
 	}
 };

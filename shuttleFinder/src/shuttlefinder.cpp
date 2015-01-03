@@ -155,13 +155,17 @@ void thread_main(){
 		cv::threshold(depthMat8bit, depthMask, 1, 255, cv::THRESH_BINARY_INV);
 		depthMask.copyTo(depthMat8bit, depthMask);
 
+		IplImage depth8bit = depthMat8bit;
+		IplImage *frame = cvCreateImage(cvGetSize(&depth8bit), IPL_DEPTH_8U, 3);
+		cvCvtColor( &depth8bit , frame, CV_GRAY2BGR );
+
 		Mat foreGroundMask;
 		Mat output;
 
 		backGroundSubtractor(depthMat8bit, foreGroundMask);
 
 		//cv::erode(depthMat8bit, depthMat8bit, cv::Mat() );
-		cv::dilate(depthMat8bit, depthMat8bit, cv::Mat());
+		//cv::dilate(depthMat8bit, depthMat8bit, cv::Mat());
 
 		// 入力画像にマスク処理を行う
 		//cv::bitwise_and(depthMat8bit, depthMat8bit, output, foreGroundMask);
@@ -169,17 +173,16 @@ void thread_main(){
 		blobs.clear();
 
 		IplImage dstImg = foreGroundMask;
-		IplImage *frame = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_8U, 3);
 		IplImage *labelImg = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_LABEL, 1);
 		cvLabel(&dstImg, labelImg, blobs);
 		cvFilterByArea(blobs, 20, 10000);
 
-		IplImage iplImage = foreGroundMask;
-		cvCvtColor(&iplImage, frame, CV_GRAY2BGR );
+		//IplImage iplImage = foreGroundMask;
+		//cvCvtColor(&iplImage, frame, CV_GRAY2BGR );
 
 		IplImage *imgOut = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_8U, 3); cvZero(imgOut);
 
-		cvRenderBlobs(labelImg, blobs, frame, frame, CV_BLOB_RENDER_BOUNDING_BOX);
+		//cvRenderBlobs(labelImg, blobs, frame, frame, CV_BLOB_RENDER_BOUNDING_BOX);
 		//cvUpdateTracks(blobs, tracks, 200., 5);
 		//cvRenderTracks(tracks, frame, frame, CV_TRACK_RENDER_ID|CV_TRACK_RENDER_BOUNDING_BOX);
 
@@ -218,7 +221,7 @@ void thread_main(){
 
 			//-------------------------------------------------------Check around the point
 
-#define MARGIN_AROUND	40
+#define MARGIN_AROUND	30
 
 			cv::Rect aroundRect;
 			aroundRect.x		= roi_rect.x-MARGIN_AROUND;
@@ -232,8 +235,6 @@ void thread_main(){
 			if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
 			if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
 
-			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
-
 			cv::Mat roi_around(depthMat, aroundRect);
 
 			for (int y = 0; y < aroundRect.height; y++)
@@ -246,14 +247,15 @@ void thread_main(){
 					{
 						geometry_msgs::Point p = DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
 						float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
-						if( dist_pow2 > 0.40f*0.40f && dist_pow2 < 0.8f*0.8f ){
+						if( dist_pow2 > 0.25f*0.25f && dist_pow2 < 0.5f*0.5f ){
 							goto not_shuttle;
 						}
 					}
 				}
 			}
 			//-------------------------------------------------------Draw the point
-			cvCircle(frame, minPoint, 10, CV_RGB(238,128,255),3);
+			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
+			cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
 			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
 			if(nearest_p.x > 1.0f){
