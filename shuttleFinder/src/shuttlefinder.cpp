@@ -95,6 +95,7 @@ void thread_main(){
 	//namedWindow( "depth_image", WINDOW_AUTOSIZE );
 	//namedWindow( "output", WINDOW_AUTOSIZE );
 	namedWindow( "frame", WINDOW_AUTOSIZE );
+	namedWindow( "bin", WINDOW_AUTOSIZE );
 
 	Mat depthMat8bit;
 	Mat depthMask(424, 512,CV_8U);
@@ -119,6 +120,7 @@ void thread_main(){
 		points.ns = "points_and_lines";
 		points.action = visualization_msgs::Marker::ADD;
 		points.pose.orientation.w = 1.0;
+		points.lifetime = ros::Duration(1000.0);
 
 		points.id = 0;
 		points.type = visualization_msgs::Marker::POINTS;
@@ -188,12 +190,18 @@ void thread_main(){
 
 		for (CvBlobs::const_iterator it=blobs.begin(); it!=blobs.end(); ++it){
 
+			bool is_shuttle = false;
+
 			//-------------------------------------------------------Detect nearest point
 			cv::Rect roi_rect;
 			roi_rect.x	= it->second->minx;
 			roi_rect.y	= it->second->miny;
 			roi_rect.width = it->second->maxx - it->second->minx;
 			roi_rect.height = it->second->maxy - it->second->miny;
+
+			if( roi_rect.width > 50 ||  roi_rect.height > 50){	//Too large
+				continue;
+			}
 
 			cv::Point minPoint(0,0);
 			int min = 65535;
@@ -235,26 +243,90 @@ void thread_main(){
 			if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
 			if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
 
+			//-------------------------------------------------------Check using binary image
+			cv::Mat roi8bit(depthMat8bit, aroundRect);
+			Mat bin_img;
+
+			int threshold8bit = (min+300) * 255.0 / 8000.0;
+			threshold(roi8bit, bin_img, threshold8bit, 255, THRESH_BINARY_INV);
+
+			cv::dilate(bin_img, bin_img, cv::Mat());
+
+
+
+			CvBlobs roiBlobs;
+
+			roiBlobs.clear();
+			IplImage dstRoiBinImg = bin_img;
+			IplImage *blob_labelImg = cvCreateImage(cvGetSize( &dstRoiBinImg ), IPL_DEPTH_LABEL, 1);
+			cvLabel( &dstRoiBinImg  , blob_labelImg, roiBlobs);
+			cvFilterByArea(roiBlobs, 100, 5000);
+
+			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(0,0,255), 1);
+
+			is_shuttle = false;
+
+			if(roiBlobs.size() > 1){	//If it is a shuttle, count of blob must be 1
+				continue;
+			}
+
+			for (CvBlobs::const_iterator it=roiBlobs.begin(); it!=roiBlobs.end(); ++it){
+				cv::Rect rect;
+				rect.x	= it->second->minx;
+				rect.y	= it->second->miny;
+				rect.width = it->second->maxx - it->second->minx;
+				rect.height = it->second->maxy - it->second->miny;
+
+				if( rect.width > 50 ||  rect.height > 50){	//Too large
+					continue;
+				}
+
+				if( rect.x > MARGIN_AROUND/4 && rect.y > MARGIN_AROUND/4 &&
+						rect.x+rect.width <  aroundRect.width - MARGIN_AROUND*3/4 &&
+						rect.y+rect.height <  aroundRect.height - MARGIN_AROUND*3/4
+				){
+					is_shuttle = true;
+					break;
+				}
+			}
+
+			if( !is_shuttle ){
+				continue;
+			}
+
+			cv::imshow("bin", bin_img);
+
+#if 0
+			////-------------------------------------------------------Check around the point
+
 			cv::Mat roi_around(depthMat, aroundRect);
 
+			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
+
+			is_shuttle = true;
 			for (int y = 0; y < aroundRect.height; y++)
 			{
 				for (int x = 0; x < aroundRect.width; x++)
 				{
 					int val = roi_around.at<unsigned short>(y,x);
 					//int val = depthMat.at<unsigned short>(aroundRect.y+y,aroundRect.x+x);
-					if (val > min && val < min+1000 )
+					if (val > min && val < min+500 )
 					{
 						geometry_msgs::Point p = DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
 						float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
 						if( dist_pow2 > 0.25f*0.25f && dist_pow2 < 0.5f*0.5f ){
+							is_shuttle = false;
 							goto not_shuttle;
 						}
 					}
 				}
 			}
+			not_shuttle:
+			if( !is_shuttle ){
+				continue;
+			}
+#endif
 			//-------------------------------------------------------Draw the point
-			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
 			cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
 			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
@@ -267,8 +339,7 @@ void thread_main(){
 				shuttle.poses.push_back(pose);
 			}
 
-			not_shuttle:
-			continue;
+
 		}
 
 		cv::imshow("frame", cvarrToMat(frame));

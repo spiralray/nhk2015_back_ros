@@ -62,7 +62,6 @@ public:
 			location.header.stamp = time;
 
 			last_speed = speed;
-			last_accel = accel;
 
 			speed.x = (pose.position.x - location.point.x)/duration;
 			speed.y = (pose.position.y - location.point.y)/duration;
@@ -73,9 +72,7 @@ public:
 			accel.y = (last_speed.y - speed.y) / duration;
 			accel.z = (last_speed.z - speed.z) / duration;
 
-			//speed.x -= accel.x;
-			//speed.y -= accel.y;
-			speed.z -= accel.z;
+			//ROS_INFO("%f %f %f %lf", accel.z, speed.z, last_speed.z, duration);
 
 			is_shuttle = true;
 			if(abs(speed.x) > 50){
@@ -170,7 +167,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   orbit = new Orbit();
-  marker_pub = n.advertise<visualization_msgs::Marker>("shuttle_line", 1000);
+  marker_pub = n.advertise<visualization_msgs::Marker>("shuttle_line", 10);
   speed_pub = n.advertise<geometry_msgs::Point>("shuttle/speed", 10);
   accel_pub = n.advertise<geometry_msgs::Point>("shuttle/accel", 10);
 
