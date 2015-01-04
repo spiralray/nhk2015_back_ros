@@ -32,7 +32,7 @@ const double mass = 0.00467;		//[kg]
 const int freq = 200;
 
 const int n_stat = 6;
-const int n_particle = 100;
+const int n_particle = 500;
 }
 
 using namespace ShuttleConst;
@@ -51,7 +51,7 @@ public:
 
 	Shuttle(){
 
-		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_particles", 1);
+		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_particles", 10);
 
 		// Create Condensation class
 		cond = cvCreateConDensation (n_stat, 0, n_particle);
@@ -60,16 +60,16 @@ public:
 		lowerBound = cvCreateMat (n_stat, 1, CV_32FC1);
 		upperBound = cvCreateMat (n_stat, 1, CV_32FC1);
 
-		cvmSet (lowerBound, 0, 0, -10.0);
-		cvmSet (lowerBound, 1, 0, -10.0);
-		cvmSet (lowerBound, 2, 0, -10.0);
+		cvmSet (lowerBound, 0, 0, -5.0);
+		cvmSet (lowerBound, 1, 0, -5.0);
+		cvmSet (lowerBound, 2, 0, -1.0);
 		cvmSet (lowerBound, 3, 0, -10.0);
 		cvmSet (lowerBound, 4, 0, -10.0);
 		cvmSet (lowerBound, 5, 0, -10.0);
 
-		cvmSet (upperBound, 0, 0, 10.0);
-		cvmSet (upperBound, 1, 0, 10.0);
-		cvmSet (upperBound, 2, 0, 10.0);
+		cvmSet (upperBound, 0, 0, 5.0);
+		cvmSet (upperBound, 1, 0, 5.0);
+		cvmSet (upperBound, 2, 0, 5.0);
 		cvmSet (upperBound, 3, 0, 10.0);
 		cvmSet (upperBound, 4, 0, 10.0);
 		cvmSet (upperBound, 5, 0, 10.0);
@@ -121,12 +121,27 @@ public:
 		cond->DynamMatr[35] = 0.0;
 
 		// Reconfigure parameters of noise
-		cvRandInit (&(cond->RandS[0]), -25, 25, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[1]), -25, 25, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[2]), -5, 5, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[3]), -5, 5, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[4]), -5, 5, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[5]), -5, 5, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[0]), -0.1, 0.1, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[1]), -0.1, 0.1, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[2]), -0.05, 0.05, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[3]), -0.05, 0.05, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[4]), -0.05, 0.05, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[5]), -0.05, 0.05, (int) cvGetTickCount ());
+
+		//
+		shuttle_particle.header.frame_id = "/laser";
+		shuttle_particle.header.stamp = ros::Time::now();
+		shuttle_particle.ns = "shuttle_particle";
+		shuttle_particle.id = 0;
+		shuttle_particle.type = visualization_msgs::Marker::POINTS;
+		shuttle_particle.action = visualization_msgs::Marker::ADD;
+
+		shuttle_particle.scale.x = 0.03;
+		shuttle_particle.scale.y = 0.03;
+		shuttle_particle.scale.z = 0.03;
+
+		shuttle_particle.color.g = 0.5;
+		shuttle_particle.color.a = 1.0;
 	}
 
 	~Shuttle(){
@@ -135,11 +150,11 @@ public:
 		cvReleaseMat (&upperBound);
 	}
 
-	float calc_likelihood (const geometry_msgs::Pose& pose, float *flSample)
+	float calc_likelihood (const geometry_msgs::Pose& pose, const geometry_msgs::Pose& particle)
 	{
-		float dist = 0.0, sigma = 50.0;
+		float dist = 0.0, sigma = 1.0;
 
-		dist = sqrt ( pow( pose.position.x - flSample[0] ,2) + pow( pose.position.y - flSample[1] ,2) + pow( pose.position.z - flSample[2] ,2) );
+		dist = sqrt ( pow( pose.position.x - particle.position.x ,2) + pow( pose.position.y - particle.position.y ,2) + pow( pose.position.z - particle.position.z ,2) );
 
 		return 1.0 / (sqrt (2.0 * CV_PI) * sigma) * expf (-dist * dist / (2.0 * sigma * sigma));
 	}
@@ -151,11 +166,18 @@ public:
 			float yy = (cond->flSamples[i][1]);
 			float zz = (cond->flSamples[i][2]);
 
-			if (xx < -10 || xx >= 10 || yy < -10 || yy >= 10 || zz < -10 || zz >= 10 ) {
+			geometry_msgs::Pose tmp;
+			tmp.position.x = cond->flSamples[i][0];
+			tmp.position.y = cond->flSamples[i][1];
+			tmp.position.z = cond->flSamples[i][2];
+
+			if ( tmp.position.x < -5.0 || tmp.position.x >= 5.0 ||
+					tmp.position.y < -5.0 || tmp.position.y >= 5.0 ||
+					tmp.position.z < -1.0 || tmp.position.z >= 5.0 ) {
 				cond->flConfidence[i] = 0.0;
 			}
 			else {
-				cond->flConfidence[i] = calc_likelihood(pose, cond->flSamples[i]);
+				cond->flConfidence[i] = calc_likelihood(pose, tmp);
 			}
 		}
 
@@ -163,6 +185,21 @@ public:
 	void estimate(){
 		// Estimate next state
 		cvConDensUpdateByTime (cond);
+	}
+
+	void publish(){
+		shuttle_particle.points.clear();
+		shuttle_particle.header.stamp = ros::Time::now();
+
+		geometry_msgs::Point p;
+
+		for (int i = 0; i < n_particle; i++) {
+			p.x = cond->flSamples[i][0];
+			p.y = cond->flSamples[i][1];
+			p.z = cond->flSamples[i][2];
+			shuttle_particle.points.push_back(p);
+		}
+		marker_pub.publish(shuttle_particle);
 	}
 
 };
@@ -183,6 +220,10 @@ void pointsCallback(const geometry_msgs::PoseArray& posearray)
 void update(int id)
 {
 	pthread_mutex_lock( &mutex );
+
+	//ROS_INFO("publish.");
+	shuttle->publish();
+
 	//ROS_INFO("estimate.");
 	shuttle->estimate();
 	pthread_mutex_unlock( &mutex );
@@ -194,7 +235,7 @@ int main (int argc, char **argv)
 
 	shuttle = new Shuttle();
 
-	ros::Subscriber subscriber = shuttle->nh.subscribe("shuttle_points", 100, pointsCallback);
+	ros::Subscriber subscriber = shuttle->nh.subscribe("shuttle_points", 1, pointsCallback);
 
 	will_shutdown = false;
 

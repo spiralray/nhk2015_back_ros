@@ -130,12 +130,12 @@ void thread_main(){
 		points.scale.y = 0.1;
 
 		// Points are green
-		points.color.g = 1.0f;
+		points.color.r = 1.0f;
 		points.color.a = 1.0;
 
 		//wait for recieve new frame
 		while(recieved == false){
-			cv::waitKey(1);
+			sleep(1);
 		}
 
 		//Get new frame
@@ -347,9 +347,6 @@ void thread_main(){
 		cvReleaseImage(&labelImg);
 		cvReleaseImage(&frame);
 		cvReleaseImage(&imgOut);
-
-		//cv::imshow("depth_image", depthMat8bit);
-		//cv::imshow("output", output);
 
 		marker_pub.publish(points);
 		shuttle_pub.publish(shuttle);
