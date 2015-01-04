@@ -106,6 +106,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  include
 )
 
 ## Declare a cpp library
@@ -114,7 +115,10 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(shuttleParticle src/shuttleParticle.cpp)
+add_executable(shuttleParticle
+  src/shuttleParticle.cpp
+  src/TimerManager.cpp
+)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
