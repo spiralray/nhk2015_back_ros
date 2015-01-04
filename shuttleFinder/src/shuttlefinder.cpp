@@ -247,7 +247,7 @@ void thread_main(){
 			cv::Mat roi8bit(depthMat8bit, aroundRect);
 			Mat bin_img;
 
-			int threshold8bit = (min+300) * 255.0 / 8000.0;
+			int threshold8bit = (min+700) * 255.0 / 8000.0;
 			threshold(roi8bit, bin_img, threshold8bit, 255, THRESH_BINARY_INV);
 
 			cv::dilate(bin_img, bin_img, cv::Mat());
@@ -260,7 +260,7 @@ void thread_main(){
 			IplImage dstRoiBinImg = bin_img;
 			IplImage *blob_labelImg = cvCreateImage(cvGetSize( &dstRoiBinImg ), IPL_DEPTH_LABEL, 1);
 			cvLabel( &dstRoiBinImg  , blob_labelImg, roiBlobs);
-			cvFilterByArea(roiBlobs, 100, 5000);
+			cvFilterByArea(roiBlobs, 50, 100000);
 
 			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(0,0,255), 1);
 
