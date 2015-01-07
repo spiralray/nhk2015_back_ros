@@ -17,7 +17,7 @@ public:
 
 private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
-	void calcOmniWheel( float joydeg, float joypow );
+	void calcOmniWheel( float joyrad, float joypow );
 
 	ros::NodeHandle mh;
 
@@ -64,10 +64,17 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 	float joyspin = ((-joy->axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy->axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
-	float joydeg = atan2(joyy, joyx);
+	float joyrad = atan2(joyy, joyx);
 	float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));
 
-	calcOmniWheel( joydeg, 2.5*joyslope );
+	float tmp;
+	tmp = fabs( M_PI/2 - fabs(joyrad) );
+	tmp = M_PI/4 - fabs( tmp - M_PI/4 );
+	joyslope = joyslope/sqrt( 1 + pow( tan(tmp), 2) );
+
+	ROS_INFO("%.3f %.3f", joyrad, joyslope);
+
+	calcOmniWheel( joyrad, 3.5*joyslope );
 
 	std_msgs::Float32 wheel1, wheel2, wheel3;
 	wheel1.data = target_speed[0] - joyspin;
@@ -78,17 +85,17 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	motor2_pub.publish(wheel2);
 	motor3_pub.publish(wheel3);
 
-	ROS_INFO("%.3f", joyspin);
-	//ROS_INFO("%.3f %.3f", joydeg, joyslope);
+	//ROS_INFO("%.3f", joyspin);
+	//ROS_INFO("%.3f %.3f", joyrad, joyslope);
 	//ROS_INFO("%.3f %.3f %.3f", target_speed[0], target_speed[1], target_speed[2] );
 }
 
-void Machine::calcOmniWheel( float joydeg, float joyslope ){
+void Machine::calcOmniWheel( float joyrad, float joyslope ){
 
     if(joyslope > 0){
-        target_speed[0] = joyslope * -sin( joydeg - M_PI/6 );
-        target_speed[1] = joyslope * -cos( joydeg );
-        target_speed[2] = joyslope * -sin( joydeg - M_PI*5/6 );
+        target_speed[0] = joyslope * -sin( joyrad - M_PI/6 );
+        target_speed[1] = joyslope * -cos( joyrad );
+        target_speed[2] = joyslope * -sin( joyrad - M_PI*5/6 );
     }
     else{
     	target_speed[0] = target_speed[1] = target_speed[2] = 0.0f;
