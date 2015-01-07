@@ -2,7 +2,7 @@
 #include <sensor_msgs/Joy.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
-
+#include <std_msgs/Byte.h>
 #include "ps3.h"
 
 #ifndef M_PI
@@ -24,6 +24,8 @@ private:
 	int linear_, angular_;
 	double l_scale_, a_scale_;
 	ros::Publisher swing_pub;
+	ros::Publisher air_pub;
+
 	ros::Subscriber joy_sub;
 
 	ros::Publisher motor1_pub;
@@ -38,6 +40,8 @@ private:
 Machine::Machine()
 {
 	swing_pub = mh.advertise<std_msgs::Float32>("mb1/swing", 1);
+	air_pub = mh.advertise<std_msgs::Byte>("mb1/air", 1);
+
 	joy_sub = mh.subscribe<sensor_msgs::Joy>("joy", 10, &Machine::joyCallback, this);
 
 	motor1_pub = mh.advertise<std_msgs::Float32>("/omni/motor1", 1);
@@ -58,6 +62,14 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	else  swing.data = 0.0f;
 
 	swing_pub.publish(swing);
+
+	std_msgs::Byte air;
+
+	if(joy->buttons[PS3_BUTTON_ACTION_CIRCLE]) air.data = 1;
+	else  air.data = 0;
+
+	air_pub.publish(air);
+
 
 	float joyx = - joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
 	float joyy = joy->axes[PS3_AXIS_STICK_LEFT_UPWARDS];
