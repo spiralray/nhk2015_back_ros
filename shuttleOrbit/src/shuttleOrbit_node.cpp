@@ -13,7 +13,8 @@ class Orbit{
 public:
 	static const double TIME_CALCULATE = 1.0;	//[s]
 
-	static const double resist_coeff = 0.001075;//resistance coefficent of air [N/(m/s)^2]
+	//static const double resist_coeff = 0.001075;//resistance coefficent of air [N/(m/s)^2]
+	static const double resist_coeff = 0.001000;//resistance coefficent of air [N/(m/s)^2]
 	static const double dt = 0.005;			//[s]
 	static const double gravity = 9.812;	//[m/s^2]
 	static const double mass = 0.00467;		//[kg]
@@ -150,7 +151,12 @@ Orbit *orbit;
 void pointsCallback(const geometry_msgs::PoseArray& posearray)
 {
 	if( !posearray.poses.empty() ){
-		orbit->update(posearray.header.stamp,posearray.poses.at(0));
+		if( posearray.poses.size() >1 ){
+			return;
+		}
+		else{
+			orbit->update(posearray.header.stamp,posearray.poses.at(0));
+		}
 		orbit->calc();
 
 		if( orbit->is_shuttle ){

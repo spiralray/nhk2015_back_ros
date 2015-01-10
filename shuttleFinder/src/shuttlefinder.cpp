@@ -235,17 +235,17 @@ void thread_main(){
 			cv::Point minPoint(0,0);
 			int min = 65535;
 
-			cv::Mat roi(depthMat, roi_rect);
+			cv::Mat roi8(depthMat8bit, roi_rect);
 
 			for (int y = 0; y < roi_rect.height; y++)
 			{
 				for (int x = 0; x < roi_rect.width; x++)
 				{
-					int val = roi.at<unsigned short>(y,x);
+					int val8bit = roi8.at<unsigned short>(y,x);
 					//int val = roi.data[y*roi_rect.width + x];
-					if (val != 0 && val < min)
+					if (val8bit != 0 && val8bit < min)
 					{
-						min = val;
+						min = val8bit;
 						minPoint.x= x;
 						minPoint.y = y;
 					}
@@ -253,9 +253,24 @@ void thread_main(){
 			}
 			minPoint.x += roi_rect.x;
 			minPoint.y += roi_rect.y;
+			min = min = depthMat.at<unsigned short>(minPoint.y,minPoint.x);
 			//int nearPointIndex = minPoint.x + (minPoint.y) * depthMat.cols;
 			geometry_msgs::Point nearest_p = kinect.DepthToWorld(minPoint.x, minPoint.y, min);
 
+			//-------------------------------------------------------Filter by depth
+			if(minPoint.x < 50 || minPoint.x > 512-50 ||
+					minPoint.y < 50 || minPoint.y > 424-50){
+				continue;
+			}
+
+			if( nearest_p.x < 1.0 ){
+				continue;
+			}
+#if 1
+			if( atan2(nearest_p.z, nearest_p.y) < 15*M_PI/180){
+				continue;
+			}
+#endif
 			//-------------------------------------------------------Check around the point
 
 #define MARGIN_AROUND	30
