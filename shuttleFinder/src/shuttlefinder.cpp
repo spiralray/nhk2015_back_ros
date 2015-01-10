@@ -13,6 +13,11 @@
 #include <geometry_msgs/PoseArray.h>	//for publish points of a shuttle
 
 #include <pthread.h>
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI	3.14159265358979
+#endif
 
 using namespace cv;
 using namespace cvb;
@@ -22,6 +27,49 @@ Mat depth_frame;
 ros::Time depth_timestamp;
 bool recieved = false;
 bool endflag = false;
+
+
+class KinectV2{
+protected:
+	float kinect_rad;
+	float kinect_sin,kinect_cos;
+public:
+	KinectV2(){
+		setKinectRad(30*M_PI/180);
+	}
+
+	void setKinectRad(float rad){
+		kinect_rad = rad;
+		kinect_sin = sin(rad);
+		kinect_cos = cos(rad);
+	}
+
+	float RawDepthToMeters(int depthValue)
+	{
+		return (double)depthValue / 1000;
+	}
+	geometry_msgs::Point DepthToWorld(int x, int y, int depthValue)
+	{
+		float fx_d = 0.0027697133333333;
+		float fy_d = -0.00271;
+		float cx_d = 256;
+		float cy_d = 214;
+
+		geometry_msgs::Point result;
+		float depth = RawDepthToMeters(depthValue);
+
+		float tx = -(float)((x - cx_d) * depth * fx_d);
+		float ty = (float)((y - cy_d) * depth * fy_d);
+		float tz = (float)(depth);
+
+		result.y = tx;
+		result.z = ty*kinect_cos + tz*kinect_sin;
+		result.x = ty*kinect_sin + tz*kinect_cos;
+		return result;
+	}
+};
+
+KinectV2 kinect;
 
 void thread_main();
 
@@ -67,25 +115,6 @@ int main(int argc, char **argv)
   destroyAllWindows();
 
   return 0;
-}
-
-float RawDepthToMeters(int depthValue)
-{
-	return (double)depthValue / 1000;
-}
-geometry_msgs::Point DepthToWorld(int x, int y, int depthValue)
-{
-	float fx_d = 0.0027697133333333;
-	float fy_d = -0.00271;
-	float cx_d = 256;
-	float cy_d = 214;
-
-	geometry_msgs::Point result;
-	float depth = RawDepthToMeters(depthValue);
-	result.y = -(float)((x - cx_d) * depth * fx_d);
-	result.z = (float)((y - cy_d) * depth * fy_d);
-	result.x = (float)(depth);
-	return result;
 }
 
 void thread_main(){
@@ -154,7 +183,10 @@ void thread_main(){
 
 		depthMat8bit.convertTo(depthMat8bit, CV_8U, 255.0 / 8000.0);
 
-		cv::threshold(depthMat8bit, depthMask, 1, 255, cv::THRESH_BINARY_INV);
+		cv::erode(depthMat8bit, depthMat8bit, cv::Mat() );
+		cv::dilate(depthMat8bit, depthMat8bit, cv::Mat());
+
+		cv::threshold(depthMat8bit, depthMask, 500*255.0 / 8000.0 , 255, cv::THRESH_BINARY_INV);
 		depthMask.copyTo(depthMat8bit, depthMask);
 
 		IplImage depth8bit = depthMat8bit;
@@ -165,9 +197,6 @@ void thread_main(){
 		Mat output;
 
 		backGroundSubtractor(depthMat8bit, foreGroundMask);
-
-		//cv::erode(depthMat8bit, depthMat8bit, cv::Mat() );
-		//cv::dilate(depthMat8bit, depthMat8bit, cv::Mat());
 
 		// 入力画像にマスク処理を行う
 		//cv::bitwise_and(depthMat8bit, depthMat8bit, output, foreGroundMask);
@@ -225,7 +254,7 @@ void thread_main(){
 			minPoint.x += roi_rect.x;
 			minPoint.y += roi_rect.y;
 			//int nearPointIndex = minPoint.x + (minPoint.y) * depthMat.cols;
-			geometry_msgs::Point nearest_p = DepthToWorld(minPoint.x, minPoint.y, min);
+			geometry_msgs::Point nearest_p = kinect.DepthToWorld(minPoint.x, minPoint.y, min);
 
 			//-------------------------------------------------------Check around the point
 
@@ -312,7 +341,7 @@ void thread_main(){
 					//int val = depthMat.at<unsigned short>(aroundRect.y+y,aroundRect.x+x);
 					if (val > min && val < min+500 )
 					{
-						geometry_msgs::Point p = DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
+						geometry_msgs::Point p = kinect.DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
 						float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
 						if( dist_pow2 > 0.25f*0.25f && dist_pow2 < 0.5f*0.5f ){
 							is_shuttle = false;
