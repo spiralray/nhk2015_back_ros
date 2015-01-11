@@ -128,6 +128,7 @@ add_executable(kinectv2 src/kinectv2.cpp)
    ${catkin_LIBRARIES}
    freenect2
    pthread
+   GLEWmx
  )
 
 #############
