@@ -167,12 +167,15 @@ void thread_main(){
 			sleep(1);
 		}
 
+		cv::Mat depthMat;
+
 		//Get new frame
 		pthread_mutex_lock( &mutex );
-		cv::Mat depthMat(depth_frame);
-		cv::Mat depthMat8bit(depth_frame);
+		depth_frame.copyTo(depthMat);
 		ros::Time timestamp = depth_timestamp;
 		pthread_mutex_unlock( &mutex );
+
+		cv::Mat depthMat8bit(depthMat);
 
 		points.header.stamp = timestamp;
 
