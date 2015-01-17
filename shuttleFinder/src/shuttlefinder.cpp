@@ -142,6 +142,8 @@ void thread_main(){
 
 	CvBlobs blobs;
 
+	bool isShuttleDetected = false;
+
 	while(!endflag){
 
 		visualization_msgs::Marker points;
@@ -203,6 +205,18 @@ void thread_main(){
 
 		// 入力画像にマスク処理を行う
 		//cv::bitwise_and(depthMat8bit, depthMat8bit, output, foreGroundMask);
+
+		//-----------------------------------------------------------Search around a point which the shuttle is detected on the last frame
+		if( isShuttleDetected == true ){
+			//ROS_INFO("A shuttle is detected on the last frame");
+
+
+
+
+		}
+
+
+		//-----------------------------------------------------------
 
 		blobs.clear();
 
@@ -378,6 +392,7 @@ void thread_main(){
 
 			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
 			if(nearest_p.x > 0.6f){
+				isShuttleDetected = true;
 				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z, min );
 				points.points.push_back(nearest_p);
 
@@ -394,6 +409,10 @@ void thread_main(){
 		cvReleaseImage(&labelImg);
 		cvReleaseImage(&frame);
 		cvReleaseImage(&imgOut);
+
+		if( shuttle.poses.size() == 0 ){
+			isShuttleDetected = false;
+		}
 
 		marker_pub.publish(points);
 		shuttle_pub.publish(shuttle);
