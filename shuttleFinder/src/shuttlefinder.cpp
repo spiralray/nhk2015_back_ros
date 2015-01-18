@@ -214,10 +214,13 @@ void thread_main(){
 		//cv::bitwise_and(depthMat8bit, depthMat8bit, output, foreGroundMask);
 
 		//-----------------------------------------------------------Search around a point which the shuttle is detected on the last frame
+
+		bool shuttle_found = false;
+
 		if( isShuttleDetected == true ){
 			//ROS_INFO("A shuttle is detected on the last frame");
 
-#define MARGIN_NEARPIXEL	40
+#define MARGIN_NEARPIXEL	45
 
 			cv::Mat depth8bit(depthMat);
 			depth8bit.convertTo(depth8bit, CV_8U, 255.0 / 8000.0);
@@ -237,7 +240,6 @@ void thread_main(){
 			//lastMin
 
 			cv::Mat roi8(depth8bit, aroundRect);
-			cv::Mat roi16(depthMat, aroundRect);
 
 			roi8.copyTo(roi8);
 
@@ -256,60 +258,27 @@ void thread_main(){
 			cv::erode(dMask, dMask, cv::Mat() );
 			cv::dilate(dMask, dMask, cv::Mat());
 			cv::dilate(dMask, dMask, cv::Mat());
+			cv::dilate(dMask, dMask, cv::Mat());
 			cv::bitwise_not(dMask,dMask);
 
 
 			dMask.copyTo(roi8, dMask);
 #endif
-			cv::imshow("shuttle", roi8);
-
-		}
-
-
-		//-----------------------------------------------------------
-
-		blobs.clear();
-
-		IplImage dstImg = foreGroundMask;
-		IplImage *labelImg = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_LABEL, 1);
-		cvLabel(&dstImg, labelImg, blobs);
-		cvFilterByArea(blobs, 20, 10000);
-
-		//IplImage iplImage = foreGroundMask;
-		//cvCvtColor(&iplImage, frame, CV_GRAY2BGR );
-
-		IplImage *imgOut = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_8U, 3); cvZero(imgOut);
-
-		//cvRenderBlobs(labelImg, blobs, frame, frame, CV_BLOB_RENDER_BOUNDING_BOX);
-		//cvUpdateTracks(blobs, tracks, 200., 5);
-		//cvRenderTracks(tracks, frame, frame, CV_TRACK_RENDER_ID|CV_TRACK_RENDER_BOUNDING_BOX);
-
-		for (CvBlobs::const_iterator it=blobs.begin(); it!=blobs.end(); ++it){
-
-			bool is_shuttle = false;
-
-			//-------------------------------------------------------Detect nearest point
-			cv::Rect roi_rect;
-			roi_rect.x	= it->second->minx;
-			roi_rect.y	= it->second->miny;
-			roi_rect.width = it->second->maxx - it->second->minx;
-			roi_rect.height = it->second->maxy - it->second->miny;
-
-			if( roi_rect.width > 130 ||  roi_rect.height > 130){	//Too large
-				continue;
-			}
 
 			cv::Point minPoint(0,0);
 			int min = 65535;
+			int count =0;
 
-			cv::Mat roi8(depthMat8bit, roi_rect);
-
-			for (int y = 0; y < roi_rect.height; y++)
+			for (int y = 0; y < aroundRect.height; y++)
 			{
-				for (int x = 0; x < roi_rect.width; x++)
+				for (int x = 0; x < aroundRect.width; x++)
 				{
-					int val8bit = roi8.at<unsigned short>(y,x);
-					//int val = roi.data[y*roi_rect.width + x];
+					int val8bit = roi8.at<unsigned char>(y,x);
+
+					if (val8bit > 0 && val8bit < 0xff){
+						count++;
+					}
+
 					if (val8bit != 0 && val8bit < min)
 					{
 						min = val8bit;
@@ -318,149 +287,239 @@ void thread_main(){
 					}
 				}
 			}
-			minPoint.x += roi_rect.x;
-			minPoint.y += roi_rect.y;
+
+			cv::Mat colorTmp;
+			cv::cvtColor(roi8, colorTmp, CV_GRAY2BGR);
+			cv::circle(colorTmp, minPoint, 10, CV_RGB(0,255,0),3);
+
+			cv::imshow("shuttle", colorTmp);
+
+			minPoint.x += aroundRect.x;
+			minPoint.y += aroundRect.y;
 			min = depthMat.at<unsigned short>(minPoint.y,minPoint.x);
 			//int nearPointIndex = minPoint.x + (minPoint.y) * depthMat.cols;
 			geometry_msgs::Point nearest_p = kinect.DepthToWorld(minPoint.x, minPoint.y, min);
 
-			//-------------------------------------------------------Filter by depth
-			if(minPoint.x < 50 || minPoint.x > 512-50 ||
-					minPoint.y < 50 || minPoint.y > 424-50){
-				continue;
-			}
+			cvCircle(frame, minPoint, 10, CV_RGB(0,255,0),3);
 
-			if( nearest_p.x < 1.0 ){
-				continue;
-			}
-#if 1
-			if( atan2(nearest_p.z, nearest_p.y) < 15*M_PI/180){
-				continue;
-			}
-#endif
-			//-------------------------------------------------------Check around the point
-			cv::Rect aroundRect;
-			aroundRect.x		= roi_rect.x-MARGIN_AROUND;
-			aroundRect.y		= roi_rect.y-MARGIN_AROUND;
-			aroundRect.width	= roi_rect.width+MARGIN_AROUND*2;
-			aroundRect.height	= roi_rect.height+MARGIN_AROUND*2;
+			//ROS_INFO("%d", count);
+			if( count >= 40 ){
+				shuttle_found = true;
 
-			if( aroundRect.x < 0)	aroundRect.x = 0;
-			if( aroundRect.y < 0)	aroundRect.y = 0;
-
-			if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
-			if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
-
-			//-------------------------------------------------------Check using binary image
-			cv::Mat roi8bit(depthMat8bit, aroundRect);
-			Mat bin_img;
-
-			int threshold8bit = (min+700) * 255.0 / 8000.0;
-			threshold(roi8bit, bin_img, threshold8bit, 255, THRESH_BINARY_INV);
-
-			cv::dilate(bin_img, bin_img, cv::Mat());
-
-
-
-			CvBlobs roiBlobs;
-
-			roiBlobs.clear();
-			IplImage dstRoiBinImg = bin_img;
-			IplImage *blob_labelImg = cvCreateImage(cvGetSize( &dstRoiBinImg ), IPL_DEPTH_LABEL, 1);
-			cvLabel( &dstRoiBinImg  , blob_labelImg, roiBlobs);
-			cvFilterByArea(roiBlobs, 50, 100000);
-
-			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(0,0,255), 1);
-
-			is_shuttle = false;
-
-			if(roiBlobs.size() > 1){	//If it is a shuttle, count of blob must be 1
-				continue;
-			}
-
-			for (CvBlobs::const_iterator it=roiBlobs.begin(); it!=roiBlobs.end(); ++it){
-				cv::Rect rect;
-				rect.x	= it->second->minx;
-				rect.y	= it->second->miny;
-				rect.width = it->second->maxx - it->second->minx;
-				rect.height = it->second->maxy - it->second->miny;
-
-				if( rect.width > 50 ||  rect.height > 50){	//Too large
-					continue;
-				}
-
-				if( rect.x > MARGIN_AROUND/4 && rect.y > MARGIN_AROUND/4 &&
-						rect.x+rect.width <  aroundRect.width - MARGIN_AROUND*3/4 &&
-						rect.y+rect.height <  aroundRect.height - MARGIN_AROUND*3/4
-				){
-					is_shuttle = true;
-					break;
-				}
-			}
-
-			if( !is_shuttle ){
-				continue;
-			}
-
-			cv::imshow("bin", bin_img);
-
-#if 0
-			////-------------------------------------------------------Check around the point
-
-			cv::Mat roi_around(depthMat, aroundRect);
-
-			cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
-
-			is_shuttle = true;
-			for (int y = 0; y < aroundRect.height; y++)
-			{
-				for (int x = 0; x < aroundRect.width; x++)
-				{
-					int val = roi_around.at<unsigned short>(y,x);
-					//int val = depthMat.at<unsigned short>(aroundRect.y+y,aroundRect.x+x);
-					if (val > min && val < min+500 )
-					{
-						geometry_msgs::Point p = kinect.DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
-						float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
-						if( dist_pow2 > 0.25f*0.25f && dist_pow2 < 0.5f*0.5f ){
-							is_shuttle = false;
-							goto not_shuttle;
-						}
-					}
-				}
-			}
-			not_shuttle:
-			if( !is_shuttle ){
-				continue;
-			}
-#endif
-			//-------------------------------------------------------Draw the point
-			cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
-
-			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
-			if(nearest_p.x > 0.6f){
-				isShuttleDetected = true;
-
-				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z, min );
 				points.points.push_back(nearest_p);
 
 				geometry_msgs::Pose pose;
 				pose.position = nearest_p;
 				shuttle.poses.push_back(pose);
 
+				ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
+
 				lastMinPoint = minPoint;
 				lastMin = min;
-				break;
 			}
-
 
 		}
 
-		cv::imshow("frame", cvarrToMat(frame));
 
-		cvReleaseImage(&labelImg);
+		if( !shuttle_found ){
+			//-----------------------------------------------------------
+
+			blobs.clear();
+
+			IplImage dstImg = foreGroundMask;
+			IplImage *labelImg = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_LABEL, 1);
+			cvLabel(&dstImg, labelImg, blobs);
+			cvFilterByArea(blobs, 20, 10000);
+
+			//IplImage iplImage = foreGroundMask;
+			//cvCvtColor(&iplImage, frame, CV_GRAY2BGR );
+
+			IplImage *imgOut = cvCreateImage(cvGetSize(&dstImg), IPL_DEPTH_8U, 3); cvZero(imgOut);
+
+			//cvRenderBlobs(labelImg, blobs, frame, frame, CV_BLOB_RENDER_BOUNDING_BOX);
+			//cvUpdateTracks(blobs, tracks, 200., 5);
+			//cvRenderTracks(tracks, frame, frame, CV_TRACK_RENDER_ID|CV_TRACK_RENDER_BOUNDING_BOX);
+
+			for (CvBlobs::const_iterator it=blobs.begin(); it!=blobs.end(); ++it){
+
+				bool is_shuttle = false;
+
+				//-------------------------------------------------------Detect nearest point
+				cv::Rect roi_rect;
+				roi_rect.x	= it->second->minx;
+				roi_rect.y	= it->second->miny;
+				roi_rect.width = it->second->maxx - it->second->minx;
+				roi_rect.height = it->second->maxy - it->second->miny;
+
+				if( roi_rect.width > 130 ||  roi_rect.height > 130){	//Too large
+					continue;
+				}
+
+				cv::Point minPoint(0,0);
+				int min = 65535;
+
+				cv::Mat roi8(depthMat8bit, roi_rect);
+
+				for (int y = 0; y < roi_rect.height; y++)
+				{
+					for (int x = 0; x < roi_rect.width; x++)
+					{
+						int val8bit = roi8.at<unsigned short>(y,x);
+						//int val = roi.data[y*roi_rect.width + x];
+						if (val8bit != 0 && val8bit < min)
+						{
+							min = val8bit;
+							minPoint.x= x;
+							minPoint.y = y;
+						}
+					}
+				}
+				minPoint.x += roi_rect.x;
+				minPoint.y += roi_rect.y;
+				min = depthMat.at<unsigned short>(minPoint.y,minPoint.x);
+				//int nearPointIndex = minPoint.x + (minPoint.y) * depthMat.cols;
+				geometry_msgs::Point nearest_p = kinect.DepthToWorld(minPoint.x, minPoint.y, min);
+
+				//-------------------------------------------------------Filter by depth
+				if(minPoint.x < 50 || minPoint.x > 512-50 ||
+						minPoint.y < 50 || minPoint.y > 424-50){
+					continue;
+				}
+
+				if( nearest_p.x < 1.0 ){
+					continue;
+				}
+#if 1
+				if( atan2(nearest_p.z, nearest_p.y) < 15*M_PI/180){
+					continue;
+				}
+#endif
+				//-------------------------------------------------------Check around the point
+				cv::Rect aroundRect;
+				aroundRect.x		= roi_rect.x-MARGIN_AROUND;
+				aroundRect.y		= roi_rect.y-MARGIN_AROUND;
+				aroundRect.width	= roi_rect.width+MARGIN_AROUND*2;
+				aroundRect.height	= roi_rect.height+MARGIN_AROUND*2;
+
+				if( aroundRect.x < 0)	aroundRect.x = 0;
+				if( aroundRect.y < 0)	aroundRect.y = 0;
+
+				if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
+				if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
+
+				//-------------------------------------------------------Check using binary image
+				cv::Mat roi8bit(depthMat8bit, aroundRect);
+				Mat bin_img;
+
+				int threshold8bit = (min+700) * 255.0 / 8000.0;
+				threshold(roi8bit, bin_img, threshold8bit, 255, THRESH_BINARY_INV);
+
+				cv::dilate(bin_img, bin_img, cv::Mat());
+
+
+
+				CvBlobs roiBlobs;
+
+				roiBlobs.clear();
+				IplImage dstRoiBinImg = bin_img;
+				IplImage *blob_labelImg = cvCreateImage(cvGetSize( &dstRoiBinImg ), IPL_DEPTH_LABEL, 1);
+				cvLabel( &dstRoiBinImg  , blob_labelImg, roiBlobs);
+				cvFilterByArea(roiBlobs, 50, 100000);
+
+				cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(0,0,255), 1);
+
+				is_shuttle = false;
+
+				if(roiBlobs.size() > 1){	//If it is a shuttle, count of blob must be 1
+					continue;
+				}
+
+				for (CvBlobs::const_iterator it=roiBlobs.begin(); it!=roiBlobs.end(); ++it){
+					cv::Rect rect;
+					rect.x	= it->second->minx;
+					rect.y	= it->second->miny;
+					rect.width = it->second->maxx - it->second->minx;
+					rect.height = it->second->maxy - it->second->miny;
+
+					if( rect.width > 50 ||  rect.height > 50){	//Too large
+						continue;
+					}
+
+					if( rect.x > MARGIN_AROUND/4 && rect.y > MARGIN_AROUND/4 &&
+							rect.x+rect.width <  aroundRect.width - MARGIN_AROUND*3/4 &&
+							rect.y+rect.height <  aroundRect.height - MARGIN_AROUND*3/4
+					){
+						is_shuttle = true;
+						break;
+					}
+				}
+
+				if( !is_shuttle ){
+					continue;
+				}
+
+				cv::imshow("bin", bin_img);
+
+#if 0
+				////-------------------------------------------------------Check around the point
+
+				cv::Mat roi_around(depthMat, aroundRect);
+
+				cvRectangle(frame, cvPoint(aroundRect.x, aroundRect.y), cvPoint(aroundRect.x + aroundRect.width, aroundRect.y + aroundRect.height), CV_RGB(255,0,255), 1);
+
+				is_shuttle = true;
+				for (int y = 0; y < aroundRect.height; y++)
+				{
+					for (int x = 0; x < aroundRect.width; x++)
+					{
+						int val = roi_around.at<unsigned short>(y,x);
+						//int val = depthMat.at<unsigned short>(aroundRect.y+y,aroundRect.x+x);
+						if (val > min && val < min+500 )
+						{
+							geometry_msgs::Point p = kinect.DepthToWorld(aroundRect.x+x, aroundRect.y+y, val);
+							float dist_pow2 = (p.x-nearest_p.x)*(p.x-nearest_p.x) + (p.y-nearest_p.y)*(p.y-nearest_p.y) + (p.z-nearest_p.z)*(p.z-nearest_p.z);
+							if( dist_pow2 > 0.25f*0.25f && dist_pow2 < 0.5f*0.5f ){
+								is_shuttle = false;
+								goto not_shuttle;
+							}
+						}
+					}
+				}
+				not_shuttle:
+				if( !is_shuttle ){
+					continue;
+				}
+#endif
+				//-------------------------------------------------------Draw the point
+				cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
+
+				//Now, X = depth, Y = width and Z = height for matching axes of laser scan
+				if(nearest_p.x > 0.6f){
+					isShuttleDetected = true;
+
+					ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
+					points.points.push_back(nearest_p);
+
+					geometry_msgs::Pose pose;
+					pose.position = nearest_p;
+					shuttle.poses.push_back(pose);
+
+					lastMinPoint = minPoint;
+					lastMin = min;
+					break;
+				}
+
+
+			}
+
+			cvReleaseImage(&labelImg);
+			cvReleaseImage(&imgOut);
+		}
+
+
+		cv::imshow("frame", cvarrToMat(frame));
 		cvReleaseImage(&frame);
-		cvReleaseImage(&imgOut);
+
 
 		if( shuttle.poses.size() == 0 ){
 			isShuttleDetected = false;
