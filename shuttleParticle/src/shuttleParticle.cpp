@@ -51,6 +51,7 @@ public:
 
 	ros::Publisher marker_pub;
 	visualization_msgs::Marker shuttle_particle;
+	visualization_msgs::Marker shuttle_line;
 
 	CvConDensation *cond = 0;
 	CvMat *lowerBound = 0;
@@ -124,7 +125,7 @@ public:
 		lowerBound = cvCreateMat (n_stat, 1, CV_32FC1);
 		upperBound = cvCreateMat (n_stat, 1, CV_32FC1);
 
-		cvmSet (lowerBound, 0, 0, -5.0);
+		cvmSet (lowerBound, 0, 0, 0.0);
 		cvmSet (lowerBound, 1, 0, -5.0);
 		cvmSet (lowerBound, 2, 0, -1.0);
 		cvmSet (lowerBound, 3, 0, -10.0);
@@ -133,7 +134,7 @@ public:
 
 		cvmSet (upperBound, 0, 0, 5.0);
 		cvmSet (upperBound, 1, 0, 5.0);
-		cvmSet (upperBound, 2, 0, 5.0);
+		cvmSet (upperBound, 2, 0, 7.0);
 		cvmSet (upperBound, 3, 0, 10.0);
 		cvmSet (upperBound, 4, 0, 10.0);
 		cvmSet (upperBound, 5, 0, 10.0);
@@ -185,12 +186,12 @@ public:
 		cond->DynamMatr[35] = 1.0;
 
 		// Reconfigure parameters of noise
-		cvRandInit (&(cond->RandS[0]), -0.1, 0.1, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[1]), -0.1, 0.1, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[2]), -0.05, 0.05, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[3]), -0.05, 0.05, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[4]), -0.05, 0.05, (int) cvGetTickCount ());
-		cvRandInit (&(cond->RandS[5]), -0.05, 0.05, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[0]), -0.3, 0.3, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[1]), -0.3, 0.3, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[2]), -0.3, 0.3, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[3]), -0.3, 0.3, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[4]), -0.3, 0.3, (int) cvGetTickCount ());
+		cvRandInit (&(cond->RandS[5]), -0.3, 0.3, (int) cvGetTickCount ());
 
 		//
 		shuttle_particle.header.frame_id = "/laser";
@@ -206,6 +207,18 @@ public:
 
 		shuttle_particle.color.g = 0.5;
 		shuttle_particle.color.a = 1.0;
+
+		shuttle_line.header.frame_id = "/laser";
+		shuttle_line.header.stamp = ros::Time::now();
+		shuttle_line.ns = "shuttle_line";
+		shuttle_line.id = 0;
+		shuttle_line.type = visualization_msgs::Marker::LINE_LIST;
+		shuttle_line.action = visualization_msgs::Marker::ADD;
+
+		shuttle_line.scale.x = 0.03;
+
+		shuttle_line.color.b = 1.0;
+		shuttle_line.color.a = 1.0;
 	}
 
 	~Shuttle(){
@@ -216,7 +229,7 @@ public:
 
 	float calc_likelihood (double duration, const geometry_msgs::Pose& pose, const float* particle)
 	{
-		float dist = 0.0, sigma = 15.0;
+		float dist = 0.0, sigma = 3.0;
 
 		float vx = (pose.position.x - oldPose.position.x) / duration;
 		float vy = (pose.position.y - oldPose.position.y) / duration;
@@ -238,14 +251,6 @@ public:
 			//Init Condensation class
 			MyConDensInitSampleSet (cond, lowerBound, upperBound);
 
-			// Reconfigure parameters of noise
-			cvRandInit (&(cond->RandS[0]), -0.1, 0.1, (int) cvGetTickCount ());
-			cvRandInit (&(cond->RandS[1]), -0.1, 0.1, (int) cvGetTickCount ());
-			cvRandInit (&(cond->RandS[2]), -0.1, 0.1, (int) cvGetTickCount ());
-			cvRandInit (&(cond->RandS[3]), -0.1, 0.1, (int) cvGetTickCount ());
-			cvRandInit (&(cond->RandS[4]), -0.1, 0.1, (int) cvGetTickCount ());
-			cvRandInit (&(cond->RandS[5]), -0.1, 0.1, (int) cvGetTickCount ());
-
 			updated = false;
 		}
 
@@ -255,12 +260,29 @@ public:
 			cond->DynamMatr[10] = sec;
 			cond->DynamMatr[17] = sec;
 
+			estimate();
+
 			// Calculate likelihood of every particle
 			for (int i = 0; i < n_particle; i++) {
-				geometry_msgs::Pose tmp;
-				tmp.position.x = cond->flSamples[i][0];
-				tmp.position.y = cond->flSamples[i][1];
-				tmp.position.z = cond->flSamples[i][2];
+
+				double v = sqrt( cond->flSamples[i][3]*cond->flSamples[i][3] + cond->flSamples[i][4]*cond->flSamples[i][4] + cond->flSamples[i][5]*cond->flSamples[i][5] );	//speed of a shuttle
+
+				double R = resist_coeff * v*v; //Air resistance
+				double Rx = -(cond->flSamples[i][3]/v)*R;
+				double Ry = -(cond->flSamples[i][4]/v)*R;
+				double Rz = -(cond->flSamples[i][5]/v)*R;
+
+				double Fx = Rx;	//force
+				double Fy = Ry;
+				double Fz = Rz - mass * gravity;
+
+				double ax = Fx / mass;	//acceleration
+				double ay = Fy / mass;
+				double az = Fz / mass;
+
+				cond->flSamples[i][3] += ax*sec;
+				cond->flSamples[i][4] += ay*sec;
+				cond->flSamples[i][5] += az*sec;
 
 				cond->flConfidence[i] = calc_likelihood(sec, pose, cond->flSamples[i]);
 			}
@@ -280,6 +302,71 @@ public:
 		}
 	}
 
+	float *getNowState(){
+
+		int mostLike = 0;
+
+		for (int i = 1; i < n_particle; i++) {
+			if( cond->flConfidence[i] > cond->flConfidence[mostLike] ){
+				mostLike = i;
+			}
+		}
+
+		return cond->flSamples[mostLike];
+	}
+
+	void calc( float *state){
+
+		//init
+		shuttle_line.points.clear();
+		shuttle_line.header.stamp = timeLastUpdate;
+
+		geometry_msgs::Point _last_point;
+		geometry_msgs::Point _last_speed;
+
+
+		_last_point.x = state[0];
+		_last_point.y = state[1];
+		_last_point.z = state[2];
+		_last_speed.x = state[3];
+		_last_speed.x = state[4];
+		_last_speed.x = state[5];
+
+		geometry_msgs::Point _point, _speed;
+
+		for(double i=0; i < TIME_CALCULATE ; i+=dt){
+
+			double v = sqrt( _last_speed.x*_last_speed.x + _last_speed.y*_last_speed.y + _last_speed.z*_last_speed.z );	//speed of a shuttle
+
+			double R = resist_coeff * v*v; //Air resistance
+			double Rx = -(_last_speed.x/v)*R;
+			double Ry = -(_last_speed.y/v)*R;
+			double Rz = -(_last_speed.z/v)*R;
+
+			double Fx = Rx;	//force
+			double Fy = Ry;
+			double Fz = Rz - mass * gravity;
+
+			double ax = Fx / mass;	//acceleration
+			double ay = Fy / mass;
+			double az = Fz / mass;
+
+			_speed.x = _last_speed.x + ax*dt;
+			_speed.y = _last_speed.y + ay*dt;
+			_speed.z = _last_speed.z + az*dt;
+
+			_point.x = _last_point.x + _speed.x*dt;
+			_point.y = _last_point.y + _speed.y*dt;
+			_point.z = _last_point.z + _speed.z*dt;
+
+			shuttle_line.points.push_back(_last_point);
+			shuttle_line.points.push_back(_point);
+			//printf("%f, %f, %f, %f,  %f, %f, %f,  %f, %f, %f\n", i, _last_point.x, _last_point.y, _last_point.z, _point.x, _point.y, _point.z, _last_speed.x, _last_speed.y, _last_speed.z);
+			_last_point = _point;
+			_last_speed = _speed;
+		}
+	}
+
 	void publish(){
 		shuttle_particle.points.clear();
 		shuttle_particle.header.stamp = ros::Time::now();
@@ -293,6 +380,8 @@ public:
 			shuttle_particle.points.push_back(p);
 		}
 		marker_pub.publish(shuttle_particle);
+		marker_pub.publish(shuttle_line);
+
 	}
 
 };
@@ -304,8 +393,12 @@ void pointsCallback(const geometry_msgs::PoseArray& posearray)
 {
 	if( !posearray.poses.empty() ){
 		//ROS_INFO("update.");
+
 		shuttle->update(posearray.header.stamp,posearray.poses.at(0));
-		shuttle->estimate();
+
+		float *nowState = shuttle->getNowState();
+		shuttle->calc(nowState);
+
 		shuttle->publish();
 
 	}
