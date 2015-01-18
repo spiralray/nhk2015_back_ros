@@ -151,6 +151,8 @@ void thread_main(){
 	cv::Point lastMinPoint(0,0);
 	int lastMin = 65535;
 
+	ros::Time timestamp = ros::Time::now();
+
 	while(!endflag){
 
 		visualization_msgs::Marker points;
@@ -180,8 +182,14 @@ void thread_main(){
 
 		//Get new frame
 		pthread_mutex_lock( &mutex );
+
+		if( timestamp == depth_timestamp){
+			pthread_mutex_unlock( &mutex );
+			continue;
+		}
+
 		depth_frame.copyTo(depthMat);
-		ros::Time timestamp = depth_timestamp;
+		timestamp = depth_timestamp;
 		pthread_mutex_unlock( &mutex );
 
 		cv::Mat depthMat8bit(depthMat);
