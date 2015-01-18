@@ -19,6 +19,8 @@
 #define M_PI	3.14159265358979
 #endif
 
+#define MARGIN_AROUND	30
+
 using namespace cv;
 using namespace cvb;
 
@@ -125,6 +127,8 @@ void thread_main(){
 	//namedWindow( "output", WINDOW_AUTOSIZE );
 	namedWindow( "frame", WINDOW_AUTOSIZE );
 	namedWindow( "bin", WINDOW_AUTOSIZE );
+	namedWindow( "shuttle", WINDOW_AUTOSIZE );
+
 
 	Mat depthMat8bit;
 	Mat depthMask(424, 512,CV_8U);
@@ -142,7 +146,10 @@ void thread_main(){
 
 	CvBlobs blobs;
 
+	geometry_msgs::Pose lastPoint;
 	bool isShuttleDetected = false;
+	cv::Point lastMinPoint(0,0);
+	int lastMin = 65535;
 
 	while(!endflag){
 
@@ -210,8 +217,51 @@ void thread_main(){
 		if( isShuttleDetected == true ){
 			//ROS_INFO("A shuttle is detected on the last frame");
 
+#define MARGIN_NEARPIXEL	40
+
+			cv::Mat depth8bit(depthMat);
+			depth8bit.convertTo(depth8bit, CV_8U, 255.0 / 8000.0);
+
+			cv::Rect aroundRect;
+			aroundRect.x		= lastMinPoint.x-MARGIN_NEARPIXEL;
+			aroundRect.y		= lastMinPoint.y-MARGIN_NEARPIXEL;
+			aroundRect.width	= MARGIN_NEARPIXEL*2;
+			aroundRect.height	= MARGIN_NEARPIXEL*3;
+
+			if( aroundRect.x < 0)	aroundRect.x = 0;
+			if( aroundRect.y < 0)	aroundRect.y = 0;
+
+			if( aroundRect.x + aroundRect.width >=512 )	aroundRect.width = 511 - aroundRect.x;
+			if( aroundRect.y + aroundRect.height >=424 )aroundRect.height = 423 - aroundRect.y;
+
+			//lastMin
+
+			cv::Mat roi8(depth8bit, aroundRect);
+			cv::Mat roi16(depthMat, aroundRect);
+
+			roi8.copyTo(roi8);
+
+			Mat dMask(roi8.rows, roi8.cols,CV_8U);
+
+			cv::threshold(roi8, dMask, (lastMin+100)*255.0 / 8000.0 , 255, cv::THRESH_BINARY);
+			dMask.copyTo(roi8, dMask);
+
+			cv::threshold(roi8, dMask, (lastMin-500)*255.0 / 8000.0 , 255, cv::THRESH_BINARY_INV);
+			dMask.copyTo(roi8, dMask);
+#if 1
+			cv::threshold(roi8, dMask, 254 , 255, cv::THRESH_BINARY);
+
+			cv::bitwise_not(dMask,dMask);
+			cv::erode(dMask, dMask, cv::Mat() );
+			cv::erode(dMask, dMask, cv::Mat() );
+			cv::dilate(dMask, dMask, cv::Mat());
+			cv::dilate(dMask, dMask, cv::Mat());
+			cv::bitwise_not(dMask,dMask);
 
 
+			dMask.copyTo(roi8, dMask);
+#endif
+			cv::imshow("shuttle", roi8);
 
 		}
 
@@ -270,7 +320,7 @@ void thread_main(){
 			}
 			minPoint.x += roi_rect.x;
 			minPoint.y += roi_rect.y;
-			min = min = depthMat.at<unsigned short>(minPoint.y,minPoint.x);
+			min = depthMat.at<unsigned short>(minPoint.y,minPoint.x);
 			//int nearPointIndex = minPoint.x + (minPoint.y) * depthMat.cols;
 			geometry_msgs::Point nearest_p = kinect.DepthToWorld(minPoint.x, minPoint.y, min);
 
@@ -289,9 +339,6 @@ void thread_main(){
 			}
 #endif
 			//-------------------------------------------------------Check around the point
-
-#define MARGIN_AROUND	30
-
 			cv::Rect aroundRect;
 			aroundRect.x		= roi_rect.x-MARGIN_AROUND;
 			aroundRect.y		= roi_rect.y-MARGIN_AROUND;
@@ -393,12 +440,17 @@ void thread_main(){
 			//Now, X = depth, Y = width and Z = height for matching axes of laser scan
 			if(nearest_p.x > 0.6f){
 				isShuttleDetected = true;
+
 				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z, min );
 				points.points.push_back(nearest_p);
 
 				geometry_msgs::Pose pose;
 				pose.position = nearest_p;
 				shuttle.poses.push_back(pose);
+
+				lastMinPoint = minPoint;
+				lastMin = min;
+				break;
 			}
 
 
@@ -412,6 +464,7 @@ void thread_main(){
 
 		if( shuttle.poses.size() == 0 ){
 			isShuttleDetected = false;
+			lastPoint = shuttle.poses[0];
 		}
 
 		marker_pub.publish(points);
