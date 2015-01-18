@@ -20,10 +20,6 @@
 
 #include <boost/random.hpp>
 
-pthread_mutex_t	mutex;  // MUTEX
-bool will_shutdown = false;
-void thread_main();
-
 namespace ShuttleConst{
 const double TIME_CALCULATE = 1.0;	//[s]
 const double resist_coeff = 0.001075;//resistance coefficent of air [N/(m/s)^2]
@@ -31,10 +27,10 @@ const double dt = 0.005;			//[s]
 const double gravity = 9.812;	//[m/s^2]
 const double mass = 0.00467;		//[kg]
 
-const int freq = 200;
+const int freq = 30;
 
 const int n_stat = 6;
-const int n_particle = 500;
+const int n_particle = 5000;
 }
 
 using namespace ShuttleConst;
@@ -60,11 +56,64 @@ public:
 	CvMat *lowerBound = 0;
 	CvMat *upperBound = 0;
 
+	ros::Time timeLastUpdate;
+
+	geometry_msgs::Pose oldPose;
+
 	bool updated;
+
+	void MyConDensInitSampleSet( CvConDensation * conDens, CvMat * lowerBound, CvMat * upperBound ){
+		int i, j;
+		float *LBound;
+		float *UBound;
+		float Prob = 1.f / conDens->SamplesNum;
+
+		if( !conDens || !lowerBound || !upperBound )
+			CV_Error( CV_StsNullPtr, "" );
+
+		if( CV_MAT_TYPE(lowerBound->type) != CV_32FC1 ||
+				!CV_ARE_TYPES_EQ(lowerBound,upperBound) )
+			CV_Error( CV_StsBadArg, "source  has not appropriate format" );
+
+		if( (lowerBound->cols != 1) || (upperBound->cols != 1) )
+			CV_Error( CV_StsBadArg, "source  has not appropriate size" );
+
+		if( (lowerBound->rows != conDens->DP) || (upperBound->rows != conDens->DP) )
+			CV_Error( CV_StsBadArg, "source  has not appropriate size" );
+
+		LBound = lowerBound->data.fl;
+		UBound = upperBound->data.fl;
+		/* Initializing the structures to create initial Sample set */
+		for( i = 0; i < conDens->DP; i++ )
+		{
+			cvRandInit( &(conDens->RandS[i]),
+					LBound[i],
+					UBound[i],
+					i + (int)cvGetTickCount());
+		}
+		/* Generating the samples */
+		for( j = 0; j < conDens->SamplesNum; j++ )
+		{
+			for( i = 0; i < conDens->DP; i++ )
+			{
+				cvbRand( conDens->RandS + i, conDens->flSamples[j] + i, 1 );
+			}
+			conDens->flConfidence[j] = Prob;
+		}
+		/* Reinitializes the structures to update samples randomly */
+		for( i = 0; i < conDens->DP; i++ )
+		{
+			cvRandInit( &(conDens->RandS[i]),
+					(LBound[i] - UBound[i]) / 5,
+					(UBound[i] - LBound[i]) / 5,
+					i + (int)cvGetTickCount());
+		}
+	}
 
 	Shuttle(){
 
 		updated = false;
+		timeLastUpdate = ros::Time::now();
 
 		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_particles", 10);
 
@@ -90,7 +139,7 @@ public:
 		cvmSet (upperBound, 5, 0, 10.0);
 
 		//Init Condensation class
-		cvConDensInitSampleSet (cond, lowerBound, upperBound);
+		MyConDensInitSampleSet (cond, lowerBound, upperBound);
 
 		// (7)ConDensationアルゴリズムにおける状態ベクトルのダイナミクスを指定する
 		cond->DynamMatr[0] = 1.0;
@@ -165,56 +214,70 @@ public:
 		cvReleaseMat (&upperBound);
 	}
 
-	float calc_likelihood (const geometry_msgs::Pose& pose, const geometry_msgs::Pose& particle)
+	float calc_likelihood (double duration, const geometry_msgs::Pose& pose, const float* particle)
 	{
-		float dist = 0.0, sigma = 1.0;
+		float dist = 0.0, sigma = 15.0;
 
-		dist = sqrt ( pow( pose.position.x - particle.position.x ,2) + pow( pose.position.y - particle.position.y ,2) + pow( pose.position.z - particle.position.z ,2) );
+		float vx = (pose.position.x - oldPose.position.x) / duration;
+		float vy = (pose.position.y - oldPose.position.y) / duration;
+		float vz = (pose.position.z - oldPose.position.z) / duration;
+
+		dist = sqrt ( pow( pose.position.x - particle[0] ,2) + pow( pose.position.y - particle[1] ,2) + pow( pose.position.z - particle[2] ,2) );
+		dist += sqrt ( pow( vx - particle[3] ,2) + pow( vy - particle[4] ,2) + pow( vz - particle[5] ,2) );
 
 		return 1.0 / (sqrt (2.0 * CV_PI) * sigma) * expf (-dist * dist / (2.0 * sigma * sigma));
 	}
 
 	void update(const ros::Time time, const geometry_msgs::Pose& pose){
-		// Calculate likelihood of every particle
-		for (int i = 0; i < n_particle; i++) {
-			geometry_msgs::Pose tmp;
-			tmp.position.x = cond->flSamples[i][0];
-			tmp.position.y = cond->flSamples[i][1];
-			tmp.position.z = cond->flSamples[i][2];
 
-			if ( tmp.position.x < -5.0 || tmp.position.x >= 5.0 ||
-					tmp.position.y < -5.0 || tmp.position.y >= 5.0 ||
-					tmp.position.z < -1.0 || tmp.position.z >= 5.0 ) {
-				cond->flConfidence[i] = 0.0;
-#if 0
-				cond->flSamples[i][0] = gen_random_float( -5.0f, 5.0f);
-				cond->flSamples[i][1] = gen_random_float( -5.0f, 5.0f);
-				cond->flSamples[i][2] = gen_random_float( -1.0f, 5.0f);
-				cond->flSamples[i][3] = gen_random_float( -10.0f, 10.0f);
-				cond->flSamples[i][4] = gen_random_float( -10.0f, 10.0f);
-				cond->flSamples[i][5] = gen_random_float( -10.0f, 10.0f);
-#endif
+		double sec = time.toSec() - timeLastUpdate.toSec();
 
-			}
-			else {
-				cond->flConfidence[i] = calc_likelihood(pose, tmp);
-			}
+		if( sec > 0.5){
+			//Resampling
+
+			//Init Condensation class
+			MyConDensInitSampleSet (cond, lowerBound, upperBound);
+
+			// Reconfigure parameters of noise
+			cvRandInit (&(cond->RandS[0]), -0.1, 0.1, (int) cvGetTickCount ());
+			cvRandInit (&(cond->RandS[1]), -0.1, 0.1, (int) cvGetTickCount ());
+			cvRandInit (&(cond->RandS[2]), -0.1, 0.1, (int) cvGetTickCount ());
+			cvRandInit (&(cond->RandS[3]), -0.1, 0.1, (int) cvGetTickCount ());
+			cvRandInit (&(cond->RandS[4]), -0.1, 0.1, (int) cvGetTickCount ());
+			cvRandInit (&(cond->RandS[5]), -0.1, 0.1, (int) cvGetTickCount ());
+
+			updated = false;
 		}
 
-		updated = true;
+		else{
+
+			cond->DynamMatr[3] = sec;
+			cond->DynamMatr[10] = sec;
+			cond->DynamMatr[17] = sec;
+
+			// Calculate likelihood of every particle
+			for (int i = 0; i < n_particle; i++) {
+				geometry_msgs::Pose tmp;
+				tmp.position.x = cond->flSamples[i][0];
+				tmp.position.y = cond->flSamples[i][1];
+				tmp.position.z = cond->flSamples[i][2];
+
+				cond->flConfidence[i] = calc_likelihood(sec, pose, cond->flSamples[i]);
+			}
+
+			updated = true;
+		}
+
+		oldPose = pose;
+		timeLastUpdate = time;
 
 	}
 	void estimate(){
 
-		if( !updated ){
-			for (int i = 0; i < n_particle; i++) {
-				cond->flConfidence[i] = 0.0f;
-			}
+		if( updated ){
+			// Estimate next state
+			cvConDensUpdateByTime (cond);
 		}
-
-		// Estimate next state
-		cvConDensUpdateByTime (cond);
-		updated = false;
 	}
 
 	void publish(){
@@ -240,23 +303,12 @@ Shuttle *shuttle;
 void pointsCallback(const geometry_msgs::PoseArray& posearray)
 {
 	if( !posearray.poses.empty() ){
-		pthread_mutex_lock( &mutex );
 		//ROS_INFO("update.");
 		shuttle->update(posearray.header.stamp,posearray.poses.at(0));
-		pthread_mutex_unlock( &mutex );
+		shuttle->estimate();
+		shuttle->publish();
+
 	}
-}
-
-void update(int id)
-{
-	pthread_mutex_lock( &mutex );
-
-	//ROS_INFO("publish.");
-	shuttle->publish();
-
-	//ROS_INFO("estimate.");
-	shuttle->estimate();
-	pthread_mutex_unlock( &mutex );
 }
 
 int main (int argc, char **argv)
@@ -267,31 +319,9 @@ int main (int argc, char **argv)
 
 	ros::Subscriber subscriber = shuttle->nh.subscribe("shuttle_points", 1, pointsCallback);
 
-	will_shutdown = false;
-
-	pthread_t thread;
-	pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );
-
-	TimerManager t;
-	t.addTimer(1000000 / freq, update);
-	t.start();
-
-	while( !will_shutdown ){
-		sleep(10);
-	}
-
-	will_shutdown = true;
-	pthread_join( thread, NULL );
+	ros::spin();
 
 	delete shuttle;
 
 	return 0;
-}
-
-void thread_main(){
-	ROS_INFO("New thread Created.");
-	pthread_detach( pthread_self( ));
-
-	ros::spin();
-	will_shutdown = true;
 }
