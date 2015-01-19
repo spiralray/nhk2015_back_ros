@@ -26,11 +26,6 @@ const double resist_coeff = 0.001075;//resistance coefficent of air [N/(m/s)^2]
 const double dt = 0.005;			//[s]
 const double gravity = 9.812;	//[m/s^2]
 const double mass = 0.00467;		//[kg]
-
-const int freq = 30;
-
-const int n_stat = 6;
-const int n_particle = 5000;
 }
 
 using namespace ShuttleConst;
@@ -71,9 +66,9 @@ public:
 
 	Shuttle(){
 
-#define MP	9	/* number of dimensions of observation vectors */
+#define MP	3	/* number of dimensions of observation vectors */
 #define DP	9	/* number of dimensions of state vectors */
-#define CP	9	/* number of dimensions of control vectors */
+#define CP	1	/* number of dimensions of control vectors */
 
 		updated = 0;
 		timeLastUpdate = ros::Time::now();
@@ -93,7 +88,7 @@ public:
 
 		//cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
 		cvSetIdentity( kalman->process_noise_cov, cvRealScalar(1e-5) );
-		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-4) );
+		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-8) );
 		cvSetIdentity( kalman->error_cov_post, cvRealScalar(1));
 
 
@@ -132,7 +127,7 @@ public:
 		kalman->measurement_matrix->data.fl[(DP+1)*2] = 1.0f;
 
 		cvZero( kalman->control_matrix );
-		//kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity * dt;
+		kalman->control_matrix->data.fl[ DP - 1 ] = gravity;
 
 
 
@@ -186,9 +181,9 @@ public:
 			updated = 2;
 
 			float A[DP] = { pose.position.x, pose.position.y, pose.position.z,
-					-(pose.position.x - kalman->transition_matrix->data.fl[0]),
-					-(pose.position.y - kalman->transition_matrix->data.fl[1]),
-					-(pose.position.z - kalman->transition_matrix->data.fl[2]),
+					-(pose.position.x - kalman->transition_matrix->data.fl[0])/sec,
+					-(pose.position.y - kalman->transition_matrix->data.fl[1])/sec,
+					-(pose.position.z - kalman->transition_matrix->data.fl[2])/sec,
 					0, 0, 0 };
 			memcpy( kalman->state_post->data.fl, A, sizeof(A));
 		}
@@ -229,14 +224,10 @@ public:
 
 			memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
 
-			cvZero( kalman->control_matrix );
-			//kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity * sec;
-			kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity;
-
-			predict();
+			predict( sec );
 
 
-			float m[MP] = {pose.position.x, pose.position.y ,pose.position.z ,0,0,0,0,0,0 };
+			float m[MP] = {pose.position.x, pose.position.y ,pose.position.z };
 			CvMat measurement = cvMat(MP, 1, CV_32FC1, m);
 			const CvMat *correction = cvKalmanCorrect(kalman, &measurement);
 
@@ -246,10 +237,14 @@ public:
 		timeLastUpdate = time;
 
 	}
-	void predict(){
+	void predict(double time){
 
 		if( updated >= 3  ){
-			const CvMat *prediction = cvKalmanPredict(kalman);
+
+			float m[CP] = { time };
+			CvMat control = cvMat(CP, 1, CV_32FC1, m);
+
+			const CvMat *prediction = cvKalmanPredict( kalman, &control );
 		}
 	}
 
@@ -302,6 +297,8 @@ public:
 			//printf("%f, %f, %f, %f,  %f, %f, %f,  %f, %f, %f\n", i, _last_point.x, _last_point.y, _last_point.z, _point.x, _point.y, _point.z, _last_speed.x, _last_speed.y, _last_speed.z);
 			_last_point = _point;
 			_last_speed = _speed;
+
+			if( _point.z <= 0.0f ) break;
 		}
 	}
 
