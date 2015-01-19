@@ -248,6 +248,7 @@ void thread_main(){
 			//lastMin
 
 			cv::Mat roi8(depth8bit, aroundRect);
+			cv::Mat roi16(depthMat, aroundRect);
 
 			roi8.copyTo(roi8);
 
@@ -277,6 +278,12 @@ void thread_main(){
 			int min = 65535;
 			int count =0;
 
+			geometry_msgs::Point center;
+			center.x = 0.0f;
+			center.y = 0.0f;
+			center.z = 0.0f;
+
+
 			for (int y = 0; y < aroundRect.height; y++)
 			{
 				for (int x = 0; x < aroundRect.width; x++)
@@ -285,6 +292,10 @@ void thread_main(){
 
 					if (val8bit > 0 && val8bit < 0xff){
 						count++;
+						geometry_msgs::Point p = kinect.DepthToWorld( aroundRect.x+x, aroundRect.y+y, roi16.at<unsigned short>(y,x) );
+						center.x += p.x;
+						center.y += p.y;
+						center.z += p.z;
 					}
 
 					if (val8bit != 0 && val8bit < min)
@@ -294,6 +305,12 @@ void thread_main(){
 						minPoint.y = y;
 					}
 				}
+			}
+
+			if( count > 0){
+				center.x /= count;
+				center.y /= count;
+				center.z /= count;
 			}
 
 			cv::Mat colorTmp;
@@ -314,13 +331,14 @@ void thread_main(){
 			if( count >= 40 ){
 				shuttle_found = true;
 
-				points.points.push_back(nearest_p);
+				//points.points.push_back(nearest_p);
+				points.points.push_back(center);
 
 				geometry_msgs::Pose pose;
 				pose.position = nearest_p;
 				shuttle.poses.push_back(pose);
 
-				ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
+				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
 
 				lastMinPoint = minPoint;
 				lastMin = min;
@@ -505,7 +523,7 @@ void thread_main(){
 				if(nearest_p.x > 0.6f){
 					isShuttleDetected = true;
 
-					ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
+					//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
 					points.points.push_back(nearest_p);
 
 					geometry_msgs::Pose pose;

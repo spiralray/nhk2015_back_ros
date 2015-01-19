@@ -25,7 +25,7 @@ const double TIME_CALCULATE = 1.0;	//[s]
 const double resist_coeff = 0.001075;//resistance coefficent of air [N/(m/s)^2]
 const double dt = 0.005;			//[s]
 const double gravity = 9.812;	//[m/s^2]
-const double mass = 0.00467;		//[kg]
+const double mass = 0.005;		//[kg]
 }
 
 using namespace ShuttleConst;
@@ -52,10 +52,6 @@ public:
 	geometry_msgs::Pose oldPose;
 
 	CvKalman* kalman;
-	CvMat* state;
-	CvMat* process_noise;
-	CvMat* measurement;
-	CvRandState rng;
 
 	CvKalman* kalmanOrbit;
 
@@ -71,17 +67,7 @@ public:
 		timeLastUpdate = ros::Time::now();
 
 		kalman = cvCreateKalman( DP, MP, CP );
-
-		state = cvCreateMat( DP, 1, CV_32FC1 );
-		process_noise = cvCreateMat( DP, 1, CV_32FC1 );
-		measurement = cvCreateMat( MP, 1, CV_32FC1 );
-
-		cvZero( measurement );
-
-		cvRandSetRange( &rng, 0, 0.1, 0 );
-		rng.disttype = CV_RAND_NORMAL;
-
-		cvRand( &rng, state );
+		kalmanOrbit = cvCreateKalman( DP, MP, CP );;
 
 		//cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
 		cvSetIdentity( kalman->process_noise_cov, cvRealScalar(1e-5) );
@@ -222,8 +208,8 @@ public:
 
 		if( updated >= 3  ){
 
-			float m[CP] = { time };
-			CvMat control = cvMat(CP, 1, CV_32FC1, m);
+			float c[CP] = { time };
+			CvMat control = cvMat(CP, 1, CV_32FC1, c);
 
 			const CvMat *prediction = cvKalmanPredict( kalman, &control );
 		}
@@ -236,49 +222,70 @@ public:
 		shuttle_line.header.stamp = timeLastUpdate;
 
 		geometry_msgs::Point _last_point;
-		geometry_msgs::Point _last_speed;
+		geometry_msgs::Point _point;
+
+		memcpy( kalmanOrbit->state_pre->data.fl, kalman->state_pre->data.fl, sizeof(float)*DP  );
+		memcpy( kalmanOrbit->state_post->data.fl, kalman->state_post->data.fl, sizeof(float)*DP  );
+		memcpy( kalmanOrbit->process_noise_cov->data.fl, kalman->process_noise_cov->data.fl, sizeof(float)*DP*DP  );
+		memcpy( kalmanOrbit->measurement_matrix->data.fl, kalman->measurement_matrix->data.fl, sizeof(float)*MP*DP  );
+		memcpy( kalmanOrbit->measurement_noise_cov->data.fl, kalman->measurement_noise_cov->data.fl, sizeof(float)*MP*MP  );
+		memcpy( kalmanOrbit->error_cov_pre->data.fl, kalman->error_cov_pre->data.fl, sizeof(float)*DP*DP  );
+		memcpy( kalmanOrbit->error_cov_post->data.fl, kalman->error_cov_post->data.fl, sizeof(float)*DP*DP  );
+		memcpy( kalmanOrbit->gain->data.fl, kalman->gain->data.fl, sizeof(float)*DP*MP  );
+		memcpy( kalmanOrbit->control_matrix->data.fl, kalman->control_matrix->data.fl, sizeof(float)*DP*CP  );
 
 
-		_last_point.x = state[0];
-		_last_point.y = state[1];
-		_last_point.z = state[2];
-		_last_speed.x = state[3];
-		_last_speed.y = state[4];
-		_last_speed.z = state[5];
+		float A[DP * DP];
 
-		geometry_msgs::Point _point, _speed;
+		for( int i=0 ; i < DP * DP ; i++ ){
+			A[i]  = 0.0;
+		}
+
+		A[0] = 1.0f;
+		A[DP+1] = 1.0f;
+		A[(DP+1)*2] = 1.0f;
+
+		A[(DP+1)*3] = 1.0f;
+		A[(DP+1)*4] = 1.0f;
+		A[(DP+1)*5] = 1.0f;
+
+		A[(DP+1)*3 - DP*3] = dt;
+		A[(DP+1)*4 - DP*3] = dt;
+		A[(DP+1)*5 - DP*3] = dt;
+
+		A[(DP+1)*6 - DP*3] = dt;
+		A[(DP+1)*7 - DP*3] = dt;
+		A[(DP+1)*8 - DP*3] = dt;
+
+		_last_point.x = kalmanOrbit->state_post->data.fl[0];
+		_last_point.y = kalmanOrbit->state_post->data.fl[1];
+		_last_point.z = kalmanOrbit->state_post->data.fl[2];
+
 
 		for(double i=0; i < TIME_CALCULATE ; i+=dt){
 
-			double v = sqrt( _last_speed.x*_last_speed.x + _last_speed.y*_last_speed.y + _last_speed.z*_last_speed.z );	//speed of a shuttle
+			double v = sqrt( kalmanOrbit->transition_matrix->data.fl[3]*kalmanOrbit->transition_matrix->data.fl[3]+ kalmanOrbit->transition_matrix->data.fl[4]*kalmanOrbit->transition_matrix->data.fl[4] + kalmanOrbit->transition_matrix->data.fl[5]*kalmanOrbit->transition_matrix->data.fl[5]
+			);	//speed of the shuttle
 
 			double R = resist_coeff * v*v; //Air resistance
-			double Rx = -(_last_speed.x/v)*R;
-			double Ry = -(_last_speed.y/v)*R;
-			double Rz = -(_last_speed.z/v)*R;
 
-			double Fx = Rx;	//force
-			double Fy = Ry;
-			double Fz = Rz - mass * gravity;
+			A[(DP+1)*6 - 3] = R/mass * dt;
+			A[(DP+1)*7 - 3] = R/mass * dt;
+			A[(DP+1)*8 - 3] = R/mass * dt;
 
-			double ax = Fx / mass;	//acceleration
-			double ay = Fy / mass;
-			double az = Fz / mass;
+			memcpy( kalmanOrbit->transition_matrix->data.fl, A, sizeof(A));
 
-			_speed.x = _last_speed.x + ax*dt;
-			_speed.y = _last_speed.y + ay*dt;
-			_speed.z = _last_speed.z + az*dt;
+			float c[CP] = { dt };
+			CvMat control = cvMat(CP, 1, CV_32FC1, c);
+			const CvMat *prediction = cvKalmanPredict( kalmanOrbit, &control );
 
-			_point.x = _last_point.x + _speed.x*dt;
-			_point.y = _last_point.y + _speed.y*dt;
-			_point.z = _last_point.z + _speed.z*dt;
+			_point.x = kalmanOrbit->state_post->data.fl[0];
+			_point.y = kalmanOrbit->state_post->data.fl[1];
+			_point.z = kalmanOrbit->state_post->data.fl[2];
 
 			shuttle_line.points.push_back(_last_point);
 			shuttle_line.points.push_back(_point);
-			//printf("%f, %f, %f, %f,  %f, %f, %f,  %f, %f, %f\n", i, _last_point.x, _last_point.y, _last_point.z, _point.x, _point.y, _point.z, _last_speed.x, _last_speed.y, _last_speed.z);
 			_last_point = _point;
-			_last_speed = _speed;
-
 			if( _point.z <= 0.0f ) break;
 		}
 	}
