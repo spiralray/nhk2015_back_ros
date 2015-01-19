@@ -329,8 +329,8 @@ public:
 		_last_point.y = state[1];
 		_last_point.z = state[2];
 		_last_speed.x = state[3];
-		_last_speed.x = state[4];
-		_last_speed.x = state[5];
+		_last_speed.y = state[4];
+		_last_speed.z = state[5];
 
 		geometry_msgs::Point _point, _speed;
 

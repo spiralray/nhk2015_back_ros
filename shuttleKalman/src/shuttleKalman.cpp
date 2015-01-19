@@ -71,7 +71,7 @@ public:
 
 	Shuttle(){
 
-#define MP	3	/* number of dimensions of observation vectors */
+#define MP	9	/* number of dimensions of observation vectors */
 #define DP	9	/* number of dimensions of state vectors */
 #define CP	9	/* number of dimensions of control vectors */
 
@@ -91,9 +91,9 @@ public:
 
 		cvRand( &rng, state );
 
-		cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
+		//cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
 		cvSetIdentity( kalman->process_noise_cov, cvRealScalar(1e-5) );
-		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-2) );
+		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-4) );
 		cvSetIdentity( kalman->error_cov_post, cvRealScalar(1));
 
 
@@ -124,6 +124,12 @@ public:
 		//A[(DP+1)*8 - 3] = c/m * dt;
 
 		memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
+
+
+		cvZero( kalman->measurement_matrix );
+		kalman->measurement_matrix->data.fl[0] = 1.0f;
+		kalman->measurement_matrix->data.fl[DP+1] = 1.0f;
+		kalman->measurement_matrix->data.fl[(DP+1)*2] = 1.0f;
 
 		cvZero( kalman->control_matrix );
 		//kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity * dt;
@@ -212,7 +218,7 @@ public:
 			A[(DP+1)*7 - DP*3] = sec;
 			A[(DP+1)*8 - DP*3] = sec;
 
-			double v = sqrt( kalman->transition_matrix->data.fl[1]*kalman->transition_matrix->data.fl[1]+ kalman->transition_matrix->data.fl[4]*kalman->transition_matrix->data.fl[4] + kalman->transition_matrix->data.fl[7]*kalman->transition_matrix->data.fl[7]
+			double v = sqrt( kalman->transition_matrix->data.fl[3]*kalman->transition_matrix->data.fl[3]+ kalman->transition_matrix->data.fl[4]*kalman->transition_matrix->data.fl[4] + kalman->transition_matrix->data.fl[5]*kalman->transition_matrix->data.fl[5]
 			);	//speed of the shuttle
 
 			double R = resist_coeff * v*v; //Air resistance
@@ -224,13 +230,13 @@ public:
 			memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
 
 			cvZero( kalman->control_matrix );
-			kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity * sec;
-
+			//kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity * sec;
+			kalman->control_matrix->data.fl[ DP*DP - 1 ] = gravity;
 
 			predict();
 
 
-			float m[MP] = {pose.position.x, pose.position.y ,pose.position.z };
+			float m[MP] = {pose.position.x, pose.position.y ,pose.position.z ,0,0,0,0,0,0 };
 			CvMat measurement = cvMat(MP, 1, CV_32FC1, m);
 			const CvMat *correction = cvKalmanCorrect(kalman, &measurement);
 
@@ -261,8 +267,8 @@ public:
 		_last_point.y = state[1];
 		_last_point.z = state[2];
 		_last_speed.x = state[3];
-		_last_speed.x = state[4];
-		_last_speed.x = state[5];
+		_last_speed.y = state[4];
+		_last_speed.z = state[5];
 
 		geometry_msgs::Point _point, _speed;
 
