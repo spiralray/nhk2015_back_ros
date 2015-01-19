@@ -45,12 +45,7 @@ public:
 	ros::NodeHandle nh;
 
 	ros::Publisher marker_pub;
-	visualization_msgs::Marker shuttle_particle;
 	visualization_msgs::Marker shuttle_line;
-
-	CvConDensation *cond = 0;
-	CvMat *lowerBound = 0;
-	CvMat *upperBound = 0;
 
 	ros::Time timeLastUpdate;
 
@@ -61,6 +56,8 @@ public:
 	CvMat* process_noise;
 	CvMat* measurement;
 	CvRandState rng;
+
+	CvKalman* kalmanOrbit;
 
 	int updated;
 
@@ -127,25 +124,11 @@ public:
 		kalman->measurement_matrix->data.fl[(DP+1)*2] = 1.0f;
 
 		cvZero( kalman->control_matrix );
-		kalman->control_matrix->data.fl[ DP - 1 ] = gravity;
+		kalman->control_matrix->data.fl[ DP - 1 ] = -gravity;
 
 
 
-		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_particles", 10);
-
-		shuttle_particle.header.frame_id = "/laser";
-		shuttle_particle.header.stamp = ros::Time::now();
-		shuttle_particle.ns = "shuttle_particle";
-		shuttle_particle.id = 0;
-		shuttle_particle.type = visualization_msgs::Marker::POINTS;
-		shuttle_particle.action = visualization_msgs::Marker::ADD;
-
-		shuttle_particle.scale.x = 0.03;
-		shuttle_particle.scale.y = 0.03;
-		shuttle_particle.scale.z = 0.03;
-
-		shuttle_particle.color.g = 0.5;
-		shuttle_particle.color.a = 1.0;
+		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_kalman", 10);
 
 		shuttle_line.header.frame_id = "/laser";
 		shuttle_line.header.stamp = ros::Time::now();
@@ -161,9 +144,7 @@ public:
 	}
 
 	~Shuttle(){
-		cvReleaseConDensation (&cond);
-		cvReleaseMat (&lowerBound);
-		cvReleaseMat (&upperBound);
+		cvReleaseKalman(&kalman);
 	}
 
 	void update(const ros::Time time, const geometry_msgs::Pose& pose){
@@ -307,19 +288,6 @@ public:
 	}
 
 	void publish(){
-		shuttle_particle.points.clear();
-		shuttle_particle.header.stamp = ros::Time::now();
-
-		geometry_msgs::Point p;
-#if 0
-		for (int i = 0; i < n_particle; i++) {
-			p.x = cond->flSamples[i][0];
-			p.y = cond->flSamples[i][1];
-			p.z = cond->flSamples[i][2];
-			shuttle_particle.points.push_back(p);
-		}
-#endif
-		marker_pub.publish(shuttle_particle);
 		marker_pub.publish(shuttle_line);
 
 	}
