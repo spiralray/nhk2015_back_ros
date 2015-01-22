@@ -41,10 +41,30 @@
 void thread_main( libfreenect2::Freenect2Device *dev );
 
 bool sflag = false;
+bool enableRGB = false;
+bool enableIR = false;
 
 int main(int argc, char** argv){
 
 	ros::init(argc, argv, "kinectv2");
+
+	ros::NodeHandle local_nh("~");
+	if (!local_nh.hasParam("enable_rgb")){
+		local_nh.setParam("enable_rgb", false);
+	}
+	if (!local_nh.hasParam("enable_ir")){
+		local_nh.setParam("enable_ir", false);
+	}
+
+	if (!local_nh.getParam("enable_rgb", enableRGB)){
+		ROS_ERROR("parameter enable_rgb is invalid.");
+		return -1;
+	}
+
+	if (!local_nh.getParam("enable_ir", enableIR)){
+		ROS_ERROR("parameter enable_ir is invalid.");
+		return -1;
+	}
 
 	libfreenect2::Freenect2 freenect2;
 	libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
@@ -70,51 +90,68 @@ int main(int argc, char** argv){
 }
 
 void thread_main( libfreenect2::Freenect2Device *dev ){
-  ROS_INFO("New thread Created.");
+	ROS_INFO("New thread Created.");
 
-  libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
-  libfreenect2::FrameMap frames;
+	unsigned int listener_flag = libfreenect2::Frame::Depth;
 
-  dev->setColorFrameListener(&listener);
-  dev->setIrAndDepthFrameListener(&listener);
-  dev->start();
+	if( enableRGB )	listener_flag |= libfreenect2::Frame::Color;
+	if( enableIR )	listener_flag |= libfreenect2::Frame::Ir;
 
-  std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
-  std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+	libfreenect2::SyncMultiFrameListener listener(listener_flag);
+	libfreenect2::FrameMap frames;
 
-  ros::NodeHandle n;
-  image_transport::ImageTransport it(n);
-  image_transport::Publisher rgb_pub = it.advertise("kinect/rgb", 1);
-  image_transport::Publisher depth_pub = it.advertise("kinect/depth", 1);
-  image_transport::Publisher ir_pub = it.advertise("kinect/ir", 1);
+	if( enableRGB ){
+		dev->setColorFrameListener(&listener);
+	}
+	dev->setIrAndDepthFrameListener(&listener);
+	dev->start();
 
-  while(!sflag)
-  {
-    listener.waitForNewFrame(frames);
-    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-    libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
-    libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
+	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
+	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
-    //cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
-    //cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-    //cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
+	ros::NodeHandle n;
+	image_transport::ImageTransport it(n);
 
-    cv::Mat rgbMat = cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data);
-    sensor_msgs::ImagePtr rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgb8", rgbMat ).toImageMsg();
-    rgb_pub.publish(rgb_msg);
+	image_transport::Publisher rgb_pub;
+	image_transport::Publisher depth_pub;
+	image_transport::Publisher ir_pub;
 
-    cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
-    depthMat.convertTo(depthMat, CV_16UC1, 1.0f);
-    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
-    depth_pub.publish(depth_msg);
+	if( enableRGB )	rgb_pub = it.advertise("kinect/rgb", 1);
+	depth_pub = it.advertise("kinect/depth", 1);
+	if( enableIR )	ir_pub = it.advertise("kinect/ir", 1);
 
-    cv::Mat irMat = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f;
-    irMat.convertTo(irMat, CV_8UC1, 255.0f);
-    sensor_msgs::ImagePtr ir_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", irMat ).toImageMsg();
-    ir_pub.publish(ir_msg);
+	while(!sflag)
+	{
+		listener.waitForNewFrame(frames);
+		libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+		libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
+		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
-    listener.release(frames);
+		//cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
+		//cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
+		//cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
 
-    //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(1));
-  }
+		if( enableRGB ){
+			cv::Mat rgbMat = cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data);
+			cv::cvtColor( rgbMat, rgbMat, CV_BGR2RGB);
+			sensor_msgs::ImagePtr rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgb8", rgbMat ).toImageMsg();
+			rgb_pub.publish(rgb_msg);
+		}
+
+		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
+		depthMat.convertTo(depthMat, CV_16UC1, 1.0f);
+		sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
+		depth_pub.publish(depth_msg);
+
+		if( enableIR ){
+			cv::Mat irMat = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f;
+			irMat.convertTo(irMat, CV_8UC1, 255.0f);
+			sensor_msgs::ImagePtr ir_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", irMat ).toImageMsg();
+			ir_pub.publish(ir_msg);
+		}
+
+		listener.release(frames);
+
+		//libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(1));
+	}
 }
