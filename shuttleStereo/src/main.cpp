@@ -23,34 +23,70 @@
 using namespace cv;
 using namespace cvb;
 
-pthread_mutex_t	mutex;  // MUTEX
+pthread_mutex_t	mutexLeft, mutexRight;
 Mat left_frame;
+Mat right_frame;
+
 ros::Time left_timestamp;
-bool recieved = false;
+ros::Time right_timestamp;
+
+bool left_recieved = false;
+bool right_recieved = false;
+
 bool endflag = false;
+
+cv::BackgroundSubtractorGMG left_backGroundSubtractor;
+cv::BackgroundSubtractorGMG right_backGroundSubtractor;
+
+Mat leftMask, rightMask;
 
 
 void thread_main();
 
-void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+void leftCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	cv_bridge::CvImagePtr cv_ptr_depth;
 	try{
-		cv_ptr_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_8UC3);
+		cv_ptr_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	}
 
 	catch (cv_bridge::Exception& e){
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	pthread_mutex_lock( &mutex );
+	pthread_mutex_lock( &mutexLeft );
+
+	left_backGroundSubtractor(cv_ptr_depth->image, leftMask);
 	left_frame = cv_ptr_depth->image;
+
 	left_timestamp = ros::Time::now();
-	recieved = true;
-	pthread_mutex_unlock( &mutex );
+	left_recieved = true;
+	pthread_mutex_unlock( &mutexLeft );
 	// convert message from ROS to openCV
 
+}
 
+
+void rightCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+	cv_bridge::CvImagePtr cv_ptr_depth;
+	try{
+		cv_ptr_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	}
+
+	catch (cv_bridge::Exception& e){
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	pthread_mutex_lock( &mutexRight );
+
+	right_backGroundSubtractor(cv_ptr_depth->image, rightMask);
+	right_frame = cv_ptr_depth->image;
+
+	right_timestamp = ros::Time::now();
+	right_recieved = true;
+	pthread_mutex_unlock( &mutexRight );
+	// convert message from ROS to openCV
 
 }
 
@@ -62,7 +98,8 @@ int main(int argc, char **argv)
   cv::startWindowThread();
 
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber sub = it.subscribe("/stereo/left/image_rect_color", 1, imageCallback);
+  image_transport::Subscriber left_sub = it.subscribe("/stereo/left/image_rect_color", 1, leftCallback);
+  image_transport::Subscriber right_sub = it.subscribe("/stereo/right/image_rect_color", 1, rightCallback);
 
   pthread_t thread;
   pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );
@@ -80,44 +117,50 @@ void thread_main(){
 	ROS_INFO("New thread Created.");
 	pthread_detach( pthread_self( ));
 
-	//namedWindow( "depth_image", WINDOW_AUTOSIZE );
-	//namedWindow( "output", WINDOW_AUTOSIZE );
-	namedWindow( "leftRaw", WINDOW_AUTOSIZE );
 	namedWindow( "leftFrame", WINDOW_AUTOSIZE );
-
-	cv::BackgroundSubtractorGMG backGroundSubtractor;
-	//cv::BackgroundSubtractorMOG backGroundSubtractor;
-	//cv::BackgroundSubtractorMOG2 backGroundSubtractor;
+	namedWindow( "rightFrame", WINDOW_AUTOSIZE );
 
 
 	while(!endflag){
 
 		Mat foreGroundLeft, outputLeft;
+		Mat foreGroundRight, outputRight;
 
 		//wait for recieve new frame
-		while(recieved == false){
+		while( !left_recieved || !right_recieved ){
 			sleep(1);
 		}
 
 		//Get new frame
-		pthread_mutex_lock( &mutex );
+		pthread_mutex_lock( &mutexLeft );
+		pthread_mutex_lock( &mutexRight );
 		cv::Mat leftMat;
 		left_frame.copyTo(leftMat);
-		ros::Time timestamp = left_timestamp;
-		pthread_mutex_unlock( &mutex );
+		ros::Time l_timestamp = left_timestamp;
 
-		cv::cvtColor( leftMat, leftMat, CV_BGR2RGB);
+		cv::Mat rightMat;
+		right_frame.copyTo(rightMat);
+		ros::Time r_timestamp = right_timestamp;
 
-		backGroundSubtractor(leftMat, foreGroundLeft);
+		leftMask.copyTo(foreGroundLeft);
+		rightMask.copyTo(foreGroundRight);
 
-		cv::erode(foreGroundLeft, foreGroundLeft, cv::Mat() );
-		cv::dilate(foreGroundLeft, foreGroundLeft, cv::Mat());
+		pthread_mutex_unlock( &mutexLeft );
+		pthread_mutex_unlock( &mutexRight );
 
-		// 入力画像にマスク処理を行う
-		cv::bitwise_and(leftMat, leftMat, outputLeft, foreGroundLeft);
 
-		cv::imshow("leftRaw", leftMat);
+
+		//cv::erode(foreGroundLeft, foreGroundLeft, cv::Mat() );
+		//cv::dilate(foreGroundLeft, foreGroundLeft, cv::Mat());
+		cv::bitwise_and(leftMat, leftMat, outputLeft, foreGroundLeft);	// 入力画像にマスク処理を行う
+
+
+		//cv::erode(foreGroundRight, foreGroundRight, cv::Mat() );
+		//cv::dilate(foreGroundRight, foreGroundRight, cv::Mat());
+		cv::bitwise_and(rightMat, rightMat, outputRight, foreGroundRight);	// 入力画像にマスク処理を行う
+
 		cv::imshow("leftFrame", outputLeft);
+		cv::imshow("rightFrame", outputRight);
 
 	}
 }
