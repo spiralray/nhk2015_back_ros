@@ -142,6 +142,8 @@ def talker():
             pub.publish( msg )
 
 def callback(msg):
+    while can.status == 1:
+        time.sleep (0.0001);
     res = can.send(msg.data)
     if res  == 1:
         print "Device busy"
@@ -153,10 +155,19 @@ def listener():
     rospy.spin()
             
 if __name__ == '__main__':
+    argv = rospy.myargv(sys.argv)
+    rospy.init_node('canusb')
     
-    rospy.init_node('canusb', anonymous=True)
+    try:
+        port = rospy.get_param('~port')
+        rospy.loginfo('Parameter %s has value %s', rospy.resolve_name('~port'), port)
+    except:
+        rospy.loginfo("Set correct port to %s", rospy.resolve_name('~port'))
+        exit()
+                
     
-    can = CanUSB('/dev/ttyUSB0', 115200, timeout=0.001)
+    
+    can = CanUSB(port, 115200, timeout=0.001)
     
     can.init()
     print "Version: " + can.version()

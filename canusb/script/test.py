@@ -20,12 +20,14 @@ import time
 import threading
 
 def talker():
-    pub = rospy.Publisher('cantx', Int16MultiArray, queue_size=10)
+    pub = rospy.Publisher('cantx', Int16MultiArray, queue_size=100)
     rospy.init_node('canusb_test', anonymous=True)
-    r = rospy.Rate(5) # 5hz
+    r = rospy.Rate(5) # 5Hz
+    count = 0
     while not rospy.is_shutdown():
         msg = Int16MultiArray()
-        msg.data = [0x321,1,2,3]
+        msg.data = [0x321,1,2,count]
+        count = (count + 1)%256
         pub.publish( msg )
         r.sleep()
 
