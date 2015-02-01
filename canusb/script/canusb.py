@@ -18,7 +18,7 @@ import serial
 import time
 
 # http://oxon.hatenablog.com/entry/20111108/1320680175
-class MySerial(serial.Serial):
+class CanUSB(serial.Serial):
     """
     Wrapper for Serial
     """
@@ -28,6 +28,7 @@ class MySerial(serial.Serial):
         # serial.Serial inherits serial.FileLike
         pass
     else:
+        
         def readline(self):
             """
             Overrides io.RawIOBase.readline which cannot handle with '\r' delimiters
@@ -41,59 +42,84 @@ class MySerial(serial.Serial):
                     return ret + c
                 else:
                     ret += c
+                    
+        def init(self):
+            self.write("\r\r")
+            while 1:
+                line = self.readline()
+                if line == "":
+                    break
+            self.write("C\r")   # Close port
+            ret = ord( self.read() )
+        
+        def version(self):  #Check version
+            can.write("V\r")
+            return can.readline()
+        
+        def serial(self):
+            can.write("N\r")
+            return can.readline()
+        
+        def setTimestamp(self, enable=0):
+            if enable == True:
+                can.write("Z1\r")
+            else:
+                can.write("Z0\r")
+            ret = ord( can.read() )
+            if ret == 13:
+                return 0
+            else:
+                return -1
+        
+        def setBaud(self, baud):
+            can.write(baud+"\r")
+            ret = ord( can.read() )
+            if ret == 13:
+                return 0
+            else:
+                return -1
+            
+        def start(self):
+            can.write("O\r")   # Open port
+            ret = ord( can.read() )
+            if ret == 13:
+                return 0
+            else:
+                return -1
+        
+        def close(self):
+            #Close port
+            self.write("C\r")   # Close port
+            ret = ord( self.read() )
+            if ret == 13:
+                print "Close port: Success"
+            else:
+                print "Close port: Fail"
+            serial.Serial.close(self)   #Call method of super class
 
 if __name__ == '__main__':
-    ser = MySerial('/dev/ttyUSB0', 115200, timeout=0.01)
-    ser.write("\r\r")
-    line = ser.readline()
-    line = ser.readline()
+    can = CanUSB('/dev/ttyUSB0', 115200, timeout=0.01)
     
-    ser.write("C\r")   # Close port
-    ret = ord( ser.read() )
-    
-    while 1:
-        line = ser.readline()
-        if line == "":
-            break
-    
-    #Check version
-    ser.write("V\r")
-    line = ser.readline()
-    print "Version: " + line
-    
-    #Check version
-    ser.write("N\r")
-    line = ser.readline()
-    print "Serial Number: " + line
+    can.init()
+    print "Version: " + can.version()
+    print "Serial Number: " + can.serial()
     
     #Disable timestamp
-    ser.write("Z0\r")   # Setup 500Kbit
-    ret = ord( ser.read() )
-    if ret == 13:
-        print "Disable timestamp: Success"
-    else:
-        print "Disable timestamp: Fail"
+    if can.setTimestamp(False) != 0:
+        print "Disable timestamp: Failed!"
     
-    #Set baudrate
-    ser.write("S6\r")   # Setup 500Kbit
-    ret = ord( ser.read() )
-    if ret == 13:
-        print "Set baudrate as 500kbps Success"
-    else:
-        print "Set baudrate as 500kbps Fail"
+    #Set baud rate to 500kbps
+    if can.setBaud("S6") != 0:
+        print "Disable baudrate: Failed!"
     
     #Open port
-    ser.write("O\r")   # Open port
-    ret = ord( ser.read() )
-    if ret == 13:
-        print "Open port: Success"
-    else:
+    if can.start() != 0:
         print "Open port: Fail"
     
     while True:
         
         try:
-            line = ser.readline()
+            line = can.readline()
             if line != "":
                 print line
         
@@ -101,18 +127,5 @@ if __name__ == '__main__':
             print ""
             print "Break"
             break
-        
-        
-    #Close port
-    ser.write("C\r")   # Close port
-    ret = ord( ser.read() )
-    if ret == 13:
-        print "Close port: Success"
-    else:
-        print "Close port: Fail"
-        
     
-    
-    
-    
-    ser.close()
+    can.close()
