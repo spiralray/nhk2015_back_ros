@@ -39,7 +39,12 @@ class CanUSB(serial.Serial):
                 if c == '':
                     return ret
                 elif c == '\r':
+                    if ret == 'z':
+                        self.status = 0
                     return ret + c
+                elif c == chr(7):
+                    self.status = -1
+                    return c
                 else:
                     ret += c
                     
@@ -51,6 +56,7 @@ class CanUSB(serial.Serial):
                     break
             self.write("C\r")   # Close port
             ret = ord( self.read() )
+            self.status = 0
         
         def version(self):  #Check version
             can.write("V\r")
@@ -65,24 +71,21 @@ class CanUSB(serial.Serial):
                 can.write("Z1\r")
             else:
                 can.write("Z0\r")
-            ret = ord( can.read() )
-            if ret == 13:
+            if can.read() == chr(13):
                 return 0
             else:
                 return -1
         
         def setBaud(self, baud):
             can.write(baud+"\r")
-            ret = ord( can.read() )
-            if ret == 13:
+            if can.read() == chr(13):
                 return 0
             else:
                 return -1
             
         def start(self):
             can.write("O\r")   # Open port
-            ret = ord( can.read() )
-            if ret == 13:
+            if can.read() == chr(13):
                 return 0
             else:
                 return -1
@@ -90,12 +93,33 @@ class CanUSB(serial.Serial):
         def close(self):
             #Close port
             self.write("C\r")   # Close port
-            ret = ord( self.read() )
-            if ret == 13:
+            if can.read() == chr(13):
                 print "Close port: Success"
             else:
                 print "Close port: Fail"
             serial.Serial.close(self)   #Call method of super class
+        
+        def send(self, stdid, dlc, data):
+            if self.status == 1:
+                return 1
+            self.d = ''
+            for i in range(0, dlc):
+                self.d += "{0:02d}".format(data[i])
+            self.status = 1
+            self.write("t{0:03X}{1:d}{2:s}\r".format(stdid,dlc,self.d))
+            #print "t{0:03X}{1:02d}{2:s}\r".format(stdid,dlc,self.d)
+            return 0
+        
+        def analyze(self, str):
+            command = str[:1]
+            if command == 't':
+                self.data = [ int(str[1:4],16), int(str[4:5],16) ]
+                for i in range(0, self.data[1]):
+                    self.data.append( int(str[5+i*2:7+i*2],16) )
+                return self.data
+            else:
+                return 0
+            
 
 if __name__ == '__main__':
     can = CanUSB('/dev/ttyUSB0', 115200, timeout=0.01)
@@ -120,8 +144,21 @@ if __name__ == '__main__':
         
         try:
             line = can.readline()
-            if line != "":
+            #if line == "z\r" or line == "Z\r":
+            #    print "Transmit Success"
+            if line == chr(7):
+                print "Transmit Failed"
+            elif line != "" and line != "z\r" and line != "Z\r":
                 print line
+                print can.analyze(line)
+                '''
+                res = can.send(0x321, 5, [1, 2, 3, 4, 5] )
+                if res  == 1:
+                    print "Device busy"
+                elif res != 0:
+                    print "Transmit Failed"
+                '''
+                    
         
         except KeyboardInterrupt:
             print ""
