@@ -19,7 +19,6 @@ import serial
 import time
 import threading
 
-# http://oxon.hatenablog.com/entry/20111108/1320680175
 class CanUSB(serial.Serial):
     """
     Wrapper for Serial
@@ -167,7 +166,7 @@ if __name__ == '__main__':
                 
     
     
-    can = CanUSB(port, 115200, timeout=0.001)
+    can = CanUSB(port, 4*115200, timeout=0.001)
     
     can.init()
     print "Version: " + can.version()
