@@ -109,7 +109,7 @@ class CanUSB(serial.Serial):
                 self.d += "{0:02d}".format(data[i])
             self.status = 1
             self.write( "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d) )
-            print "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d)
+            #print "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d)
             return 0
                    
         def analyze(self, str):
@@ -124,7 +124,7 @@ class CanUSB(serial.Serial):
                 return 0
             
 def talker():
-    pub = rospy.Publisher('cantx', Int16MultiArray, queue_size=100)
+    pub = rospy.Publisher('canrx', Int16MultiArray, queue_size=100)
     
     while stop == False:
         
@@ -141,15 +141,15 @@ def talker():
             msg.data = can.analyze(line)
             pub.publish( msg )
 
-def callback(data):
-    res = can.send(data)
+def callback(msg):
+    res = can.send(msg.data)
     if res  == 1:
         print "Device busy"
     elif res != 0:
         print "Transmit Failed"
     
 def listener():
-    rospy.Subscriber("canrx", Int16MultiArray, callback)
+    rospy.Subscriber("cantx", Int16MultiArray, callback)
     rospy.spin()
             
 if __name__ == '__main__':
