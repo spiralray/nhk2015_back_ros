@@ -105,7 +105,7 @@ class CanUSB(serial.Serial):
                 return 1
             self.d = ''
             for i in range(1, len(data)):
-                self.d += "{0:02d}".format(data[i])
+                self.d += "{0:02X}".format(data[i])
             self.status = 1
             self.write( "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d) )
             #print "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d)
@@ -137,17 +137,20 @@ def talker():
             #print line
             #print can.analyze(line)
             msg = Int16MultiArray()
-            msg.data = can.analyze(line)
-            pub.publish( msg )
+            try:
+                msg.data = can.analyze(line)
+                pub.publish( msg )
+            except:
+                rospy.logerr('Invalid command %s', line )
 
 def callback(msg):
     while can.status == 1:
         time.sleep (0.0001);
     res = can.send(msg.data)
     if res  == 1:
-        print "Device busy"
+        rospy.logerr( "Device busy")
     elif res != 0:
-        print "Transmit Failed"
+        rospy.logerr( "Transmit Failed")
     
 def listener():
     rospy.Subscriber("cantx", Int16MultiArray, callback)
@@ -161,12 +164,12 @@ if __name__ == '__main__':
         port = rospy.get_param('~port')
         rospy.loginfo('Parameter %s has value %s', rospy.resolve_name('~port'), port)
     except:
-        rospy.loginfo("Set correct port to %s", rospy.resolve_name('~port'))
+        rospy.logerr("Set correct port to %s", rospy.resolve_name('~port'))
         exit()
                 
     
     
-    can = CanUSB(port, 4*115200, timeout=0.001)
+    can = CanUSB(port, 4*115200, timeout=0.01)
     
     can.init()
     print "Version: " + can.version()
@@ -174,15 +177,15 @@ if __name__ == '__main__':
     
     #Disable timestamp
     if can.setTimestamp(False) != 0:
-        print "Disable timestamp: Failed!"
+        rospy.logerr( "Disable timestamp: Failed!" )
     
     #Set baud rate to 500kbps
     if can.setBaud("S6") != 0:
-        print "Disable baudrate: Failed!"
+        rospy.logerr( "Disable baudrate: Failed!")
     
     #Open port
     if can.start() != 0:
-        print "Open port: Fail"
+        rospy.logerr( "Open port: Failed" )
         exit()
     
     stop = False
