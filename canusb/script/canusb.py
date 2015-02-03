@@ -166,8 +166,6 @@ if __name__ == '__main__':
     except:
         rospy.logerr("Set correct port to %s", rospy.resolve_name('~port'))
         exit()
-                
-    
     
     can = CanUSB(port, 4*115200, timeout=0.1)
     
@@ -179,9 +177,42 @@ if __name__ == '__main__':
     if can.setTimestamp(False) != 0:
         rospy.logerr( "Disable timestamp: Failed!" )
     
-    #Set baud rate to 500kbps
-    if can.setBaud("S6") != 0:
+    #Set baud rate
+    try:
+        baud = rospy.get_param('~baud')
+        rospy.loginfo('Parameter %s has value %s', rospy.resolve_name('~baud'), baud)
+    except:
+        baud = "500k"
+        rospy.loginfo("%s not defined.", rospy.resolve_name('~port'))
+        rospy.loginfo("Default baudrate: 500kbps")
+    
+    if baud == "10k":
+        res = can.setBaud("S0")
+    elif baud == "20k":
+        res = can.setBaud("S1")
+    elif baud == "50k":
+        res = can.setBaud("S2")
+    elif baud == "100k":
+        res = can.setBaud("S3")
+    elif baud == "125k":
+        res = can.setBaud("S4")
+    elif baud == "250k":
+        res = can.setBaud("S5")
+    elif baud == "500k":
+        res = can.setBaud("S6")
+    elif baud == "800k":
+        res = can.setBaud("S7")
+    elif baud == "1m":
+        res = can.setBaud("S8")
+    else:
+        rospy.logerr( "Set correct baudrate. See README")
+        can.close()
+        exit()
+    
+    if res != 0:
         rospy.logerr( "Disable baudrate: Failed!")
+        can.close()
+        exit()
     
     #Open port
     if can.start() != 0:
