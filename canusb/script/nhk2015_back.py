@@ -41,6 +41,17 @@ def callback(msg):
         data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
         mb1enc3.publish( std_msgs.msg.Float32(data) )
     
+    #Encoders for dead reckoning
+    elif msg.data[0] == 0x330:
+        data =  struct.unpack('ii', ''.join(chr(i) for i in msg.data[1:]) )
+        encX.publish( std_msgs.msg.Int32(data[0]) )
+        encY.publish( std_msgs.msg.Int32(data[1]) )
+        
+    #Data of R1350N
+    elif msg.data[0] == 0x220:
+        data =  struct.unpack('h', ''.join(chr(i) for i in msg.data[1:]) )[0]
+        mb1enc3.publish( std_msgs.msg.Float32(data/100) )
+    
 def omni1(msg):
     send = Int16MultiArray()
     send.data = [0x110]
@@ -109,6 +120,10 @@ if __name__ == '__main__':
     mb1enc1 = rospy.Publisher('/mb1/enc1', std_msgs.msg.Float32, queue_size=1)
     mb1enc2 = rospy.Publisher('/mb1/enc2', std_msgs.msg.Float32, queue_size=1)
     mb1enc3 = rospy.Publisher('/mb1/enc3', std_msgs.msg.Float32, queue_size=1)
+    
+    encX = rospy.Publisher('/encX', std_msgs.msg.Int32, queue_size=1)
+    encY = rospy.Publisher('/encY', std_msgs.msg.Int32, queue_size=1)
+    r1350 = rospy.Publisher('/yaw', std_msgs.msg.Float32, queue_size=1)
     
                 
     listener()
