@@ -169,7 +169,7 @@ if __name__ == '__main__':
                 
     
     
-    can = CanUSB(port, 4*115200, timeout=0.01)
+    can = CanUSB(port, 4*115200, timeout=0.1)
     
     can.init()
     print "Version: " + can.version()
