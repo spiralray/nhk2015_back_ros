@@ -7,17 +7,17 @@ import struct
 import genpy
 
 class CAN(genpy.Message):
-  _md5sum = "c2f02b75374baa8642f5921662ba71d1"
+  _md5sum = "538459a17b716b5d40481761364b2a7c"
   _type = "canusb/CAN"
   _has_header = False #flag to mark the presence of a Header object
   _full_text = """time timestamp
 uint16 stdId
-int16 extId
+int32 extId
 uint8[] data
 
 """
   __slots__ = ['timestamp','stdId','extId','data']
-  _slot_types = ['time','uint16','int16','uint8[]']
+  _slot_types = ['time','uint16','int32','uint8[]']
 
   def __init__(self, *args, **kwds):
     """
@@ -63,7 +63,7 @@ uint8[] data
     """
     try:
       _x = self
-      buff.write(_struct_2IHh.pack(_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId))
+      buff.write(_struct_2IHi.pack(_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId))
       _x = self.data
       length = len(_x)
       # - if encoded as a list instead, serialize as bytes instead of string
@@ -85,8 +85,8 @@ uint8[] data
       end = 0
       _x = self
       start = end
-      end += 12
-      (_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId,) = _struct_2IHh.unpack(str[start:end])
+      end += 14
+      (_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId,) = _struct_2IHi.unpack(str[start:end])
       start = end
       end += 4
       (length,) = _struct_I.unpack(str[start:end])
@@ -107,7 +107,7 @@ uint8[] data
     """
     try:
       _x = self
-      buff.write(_struct_2IHh.pack(_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId))
+      buff.write(_struct_2IHi.pack(_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId))
       _x = self.data
       length = len(_x)
       # - if encoded as a list instead, serialize as bytes instead of string
@@ -130,8 +130,8 @@ uint8[] data
       end = 0
       _x = self
       start = end
-      end += 12
-      (_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId,) = _struct_2IHh.unpack(str[start:end])
+      end += 14
+      (_x.timestamp.secs, _x.timestamp.nsecs, _x.stdId, _x.extId,) = _struct_2IHi.unpack(str[start:end])
       start = end
       end += 4
       (length,) = _struct_I.unpack(str[start:end])
@@ -144,4 +144,4 @@ uint8[] data
       raise genpy.DeserializationError(e) #most likely buffer underfill
 
 _struct_I = genpy.struct_I
-_struct_2IHh = struct.Struct("<2IHh")
+_struct_2IHi = struct.Struct("<2IHi")

@@ -108,8 +108,13 @@ class CanUSB(serial.Serial):
             for i in range(0, len(msg.data)):
                 self.d += "{0:02X}".format(ord(msg.data[i]))
             self.status = 1
-            self.write( "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d) )
-            print "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d)
+            
+            if msg.extId < 0: #Standard format
+                self.write( "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d) )
+                #print "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d)
+            else:   #Extended format
+                self.write( "T{0:08X}{1:d}{2:s}\r".format( msg.stdId + (msg.extId*0x400), len(msg.data), self.d) )
+                #print "T{0:08X}{1:d}{2:s}\r".format( msg.stdId + (msg.extId*0x400), len(msg.data), self.d)
             return 0
                    
         def analyze(self, str):
@@ -122,6 +127,15 @@ class CanUSB(serial.Serial):
                 self.msg.extId = -1
                 for i in range(0, self.dlc):
                     self.msg.data +=  struct.pack('B', int(str[5+i*2:7+i*2],16))
+                return self.msg
+            elif command == 'T':
+                self.msg = CAN()
+                self.dlc = int(str[9:10],16)
+                self.msg.timestamp = rospy.get_rostime()
+                self.msg.stdId = int(str[1:9],16)%0x400
+                self.msg.extId = int(str[1:9],16)/0x400
+                for i in range(0, self.dlc):
+                    self.msg.data +=  struct.pack('B', int(str[10+i*2:12+i*2],16))
                 return self.msg
             else:
                 return 0
