@@ -13,9 +13,10 @@ import roslib
 roslib.load_manifest("canusb");
 
 import rospy
-from std_msgs.msg import Int16MultiArray
+from _CAN import CAN
 
 import serial
+import struct
 import time
 import threading
 
@@ -100,30 +101,33 @@ class CanUSB(serial.Serial):
                 print "Close port: Fail"
             serial.Serial.close(self)   #Call method of super class
             
-        def send(self, data):
+        def send(self, msg):
             if self.status == 1:
                 return 1
             self.d = ''
-            for i in range(1, len(data)):
-                self.d += "{0:02X}".format(data[i])
+            for i in range(0, len(msg.data)):
+                self.d += "{0:02X}".format(ord(msg.data[i]))
             self.status = 1
-            self.write( "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d) )
-            #print "t{0:03X}{1:d}{2:s}\r".format( data[0], len(data)-1, self.d)
+            self.write( "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d) )
+            print "t{0:03X}{1:d}{2:s}\r".format( msg.stdId, len(msg.data), self.d)
             return 0
                    
         def analyze(self, str):
             command = str[:1]
             if command == 't':
+                self.msg = CAN()
                 self.dlc = int(str[4:5],16)
-                self.data = [ int(str[1:4],16) ]
+                self.msg.timestamp = rospy.get_rostime()
+                self.msg.stdId = int(str[1:4],16)
+                self.msg.extId = -1
                 for i in range(0, self.dlc):
-                    self.data.append( int(str[5+i*2:7+i*2],16) )
-                return self.data
+                    self.msg.data +=  struct.pack('B', int(str[5+i*2:7+i*2],16))
+                return self.msg
             else:
                 return 0
             
 def talker():
-    pub = rospy.Publisher('canrx', Int16MultiArray, queue_size=100)
+    pub = rospy.Publisher('canrx', CAN, queue_size=100)
     
     while stop == False:
         
@@ -136,9 +140,8 @@ def talker():
         elif line != "" and line != "z\r" and line != "Z\r":
             #print line
             #print can.analyze(line)
-            msg = Int16MultiArray()
             try:
-                msg.data = can.analyze(line)
+                msg = can.analyze(line)
                 pub.publish( msg )
             except:
                 rospy.logerr('Invalid command %s', line )
@@ -146,14 +149,14 @@ def talker():
 def callback(msg):
     while can.status == 1:
         time.sleep (0.0001);
-    res = can.send(msg.data)
+    res = can.send(msg)
     if res  == 1:
         rospy.logerr( "Device busy")
     elif res != 0:
         rospy.logerr( "Transmit Failed")
     
 def listener():
-    rospy.Subscriber("cantx", Int16MultiArray, callback)
+    rospy.Subscriber("cantx", CAN, callback)
     rospy.spin()
             
 if __name__ == '__main__':

@@ -13,90 +13,90 @@ import roslib
 roslib.load_manifest("canusb");
 
 import rospy
-from std_msgs.msg import Int16MultiArray
 import std_msgs.msg
+from _CAN import CAN
 
 import struct
 import time
 import threading
 
 def callback(msg):
-    if msg.data[0] == 0x310:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    if msg.stdId == 0x310:
+        data =  struct.unpack('f', msg.data )[0]
         omnienc1.publish( std_msgs.msg.Float32(data) )
-    elif msg.data[0] == 0x311:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x311:
+        data =  struct.unpack('f', msg.data )[0]
         omnienc2.publish( std_msgs.msg.Float32(data) )
-    elif msg.data[0] == 0x312:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x312:
+        data =  struct.unpack('f', msg.data )[0]
         omnienc3.publish( std_msgs.msg.Float32(data) )
     
-    elif msg.data[0] == 0x320:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x320:
+        data =  struct.unpack('f', msg.data )[0]
         mb1enc1.publish( std_msgs.msg.Float32(data) )
-    elif msg.data[0] == 0x321:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x321:
+        data =  struct.unpack('f', msg.data )[0]
         mb1enc2.publish( std_msgs.msg.Float32(data) )
-    elif msg.data[0] == 0x322:
-        data =  struct.unpack('f', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x322:
+        data =  struct.unpack('f', msg.data )[0]
         mb1enc3.publish( std_msgs.msg.Float32(data) )
     
     #Encoders for dead reckoning
-    elif msg.data[0] == 0x330:
-        data =  struct.unpack('ii', ''.join(chr(i) for i in msg.data[1:]) )
+    elif msg.stdId == 0x330:
+        data =  struct.unpack('ii', msg.data )
         encX.publish( std_msgs.msg.Int32(data[0]) )
         encY.publish( std_msgs.msg.Int32(data[1]) )
         
     #Data of R1350N
-    elif msg.data[0] == 0x220:
-        data =  struct.unpack('h', ''.join(chr(i) for i in msg.data[1:]) )[0]
+    elif msg.stdId == 0x220:
+        data =  struct.unpack('h', msg.data )[0]
         mb1enc3.publish( std_msgs.msg.Float32(data/100) )
     
 def omni1(msg):
-    send = Int16MultiArray()
-    send.data = [0x110]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x110
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
 def omni2(msg):
-    send = Int16MultiArray()
-    send.data = [0x111]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x111
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
 def omni3(msg):
-    send = Int16MultiArray()
-    send.data = [0x112]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x112
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
 def mb1motor1(msg):
-    send = Int16MultiArray()
-    send.data = [0x120]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x120
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
 def mb1motor2(msg):
-    send = Int16MultiArray()
-    send.data = [0x121]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x121
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
 def mb1swing(msg):
-    send = Int16MultiArray()
-    send.data = [0x122]
-    for char in struct.pack('f', msg.data):
-        send.data.append( ord(char) ) 
+    send = CAN()
+    send.stdId = 0x122
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
      
 def listener():
-    rospy.Subscriber("canrx", Int16MultiArray, callback)
+    rospy.Subscriber("canrx", CAN, callback)
     rospy.Subscriber("/omni/motor1", std_msgs.msg.Float32, omni1)
     rospy.Subscriber("/omni/motor2", std_msgs.msg.Float32, omni2)
     rospy.Subscriber("/omni/motor3", std_msgs.msg.Float32, omni3)
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('canMachine')
     
-    pub = rospy.Publisher('cantx', Int16MultiArray, queue_size=100)
+    pub = rospy.Publisher('cantx', CAN, queue_size=100)
     
     omnienc1 = rospy.Publisher('/omni/enc1', std_msgs.msg.Float32, queue_size=1)
     omnienc2 = rospy.Publisher('/omni/enc2', std_msgs.msg.Float32, queue_size=1)
