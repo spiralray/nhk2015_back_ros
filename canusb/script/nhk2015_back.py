@@ -19,6 +19,7 @@ from _CAN import CAN
 import struct
 import time
 import threading
+from math import pi
 
 def callback(msg):
     if msg.stdId == 0x310:
@@ -50,7 +51,7 @@ def callback(msg):
     #Data of R1350N
     elif msg.stdId == 0x220:
         data =  struct.unpack('h', msg.data )[0]
-        mb1enc3.publish( std_msgs.msg.Float32(data/100) )
+        r1350.publish( std_msgs.msg.Float32(data/100 * pi /180 ) )
     
 def omni1(msg):
     send = CAN()
