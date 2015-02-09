@@ -20,7 +20,8 @@ int threshold;
 #define FIELD_WIDTH 8.420
 
 
-#define DISTANCE_LRF_TO_CENTER 0.455	//[m]
+#define DISTANCE_LRF_TO_CENTER	0.455	//[m]
+#define FENCE_WIDTH				0.04	//[m]
 
 pthread_mutex_t	mutex;  // MUTEX
 sensor_msgs::LaserScan lasermsg;
@@ -314,6 +315,8 @@ void thread_main(){
 
 		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(-yaw-M_PI/2);
 		pose.pose.position.y += DISTANCE_LRF_TO_CENTER*sin(-yaw-M_PI/2);
+
+		pose.pose.position.y += FENCE_WIDTH / 2;
 
 		//pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(yaw+M_PI/2);
 		//pose.pose.position.y -= DISTANCE_LRF_TO_CENTER*sin(yaw+M_PI/2);

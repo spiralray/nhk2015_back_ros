@@ -2,6 +2,7 @@
 #include "std_msgs/Int32.h"
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/PoseStamped.h>
+
 #ifndef M_PI
 	#define M_PI 3.1415926535897932
 #endif
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
 	pose_msg.pose.position.x = pose_msg.pose.position.y = pose_msg.pose.position.z = 0.0f;
 	pose_msg.pose.orientation.x = pose_msg.pose.orientation.y = pose_msg.pose.orientation.z = pose_msg.pose.orientation.w = 0.0f;
 
-	pub = n.advertise<geometry_msgs::PoseStamped>("location", 1000);
+	pub = n.advertise<geometry_msgs::PoseStamped>("/robot/pose", 5);
 	ros::spin();
 
 	return 0;

@@ -11,6 +11,7 @@
 
 #include <visualization_msgs/Marker.h>	//for displaying points of a shuttle
 #include <geometry_msgs/PoseArray.h>	//for publish points of a shuttle
+#include <geometry_msgs/PoseStamped.h>
 
 #include <pthread.h>
 #include <math.h>
@@ -30,6 +31,8 @@ ros::Time depth_timestamp;
 bool recieved = false;
 bool endflag = false;
 
+pthread_mutex_t	pose_mutex;  // MUTEX
+geometry_msgs::Pose _pose;
 
 class KinectV2{
 protected:
@@ -64,9 +67,9 @@ public:
 		float ty = (float)((y - cy_d) * depth * fy_d);
 		float tz = (float)(depth);
 
-		result.y = tx;
+		result.x = tx;
 		result.z = ty*kinect_cos + tz*kinect_sin;
-		result.x = ty*kinect_sin + tz*kinect_cos;
+		result.y = ty*kinect_sin + tz*kinect_cos;
 		return result;
 	}
 };
@@ -97,6 +100,21 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 }
 
+void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
+	//ROS_INFO("poseCallback");
+	pthread_mutex_lock( &pose_mutex );
+	_pose = msg->pose;
+	pthread_mutex_unlock( &pose_mutex );
+
+}
+
+
+void transformToGlobalFrame( geometry_msgs::Point* output, const geometry_msgs::Point* shuttle, const geometry_msgs::Pose* robot){
+	float yaw = -atan2(2.0*(robot->orientation.x*robot->orientation.y + robot->orientation.w*robot->orientation.z), robot->orientation.w*robot->orientation.w + robot->orientation.x*robot->orientation.x - robot->orientation.y*robot->orientation.y - robot->orientation.z*robot->orientation.z);
+	output->x = robot->position.x + shuttle->x*cos(yaw) + shuttle->y*sin(yaw);
+	output->y = robot->position.y + shuttle->x*sin(yaw) + shuttle->y*cos(yaw);
+	output->z = robot->position.z + shuttle->z;
+}
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "image_listener");
@@ -106,6 +124,8 @@ int main(int argc, char **argv)
 
   image_transport::ImageTransport it(nh);
   image_transport::Subscriber sub = it.subscribe("/kinect/depth", 1, imageCallback);
+
+  ros::Subscriber subPose = nh.subscribe("/robot/pose", 10, poseCallback);
 
   pthread_t thread;
   pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );
@@ -153,10 +173,12 @@ void thread_main(){
 
 	ros::Time timestamp = ros::Time::now();
 
+	geometry_msgs::Pose robot_pose;
+
 	while(!endflag){
 
 		visualization_msgs::Marker points;
-		points.header.frame_id = "/laser";
+		points.header.frame_id = "/map";
 		points.ns = "points_and_lines";
 		points.action = visualization_msgs::Marker::ADD;
 		points.pose.orientation.w = 1.0;
@@ -181,6 +203,11 @@ void thread_main(){
 		cv::Mat depthMat;
 
 		//Get new frame
+
+		pthread_mutex_lock( &pose_mutex );
+		robot_pose = _pose;
+		pthread_mutex_unlock( &pose_mutex );
+
 		pthread_mutex_lock( &mutex );
 
 		if( timestamp == depth_timestamp){
@@ -331,11 +358,9 @@ void thread_main(){
 			if( count >= 40 ){
 				shuttle_found = true;
 
-				//points.points.push_back(nearest_p);
-				points.points.push_back(center);
-
 				geometry_msgs::Pose pose;
-				pose.position = nearest_p;
+				transformToGlobalFrame(&pose.position, &nearest_p, &robot_pose);
+				points.points.push_back(pose.position);
 				shuttle.poses.push_back(pose);
 
 				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
@@ -412,11 +437,11 @@ void thread_main(){
 					continue;
 				}
 
-				if( nearest_p.x < 1.0 ){
+				if( nearest_p.y < 1.0 ){
 					continue;
 				}
 #if 1
-				if( atan2(nearest_p.z, nearest_p.y) < 15*M_PI/180){
+				if( atan2(nearest_p.z, nearest_p.x) < 15*M_PI/180){
 					continue;
 				}
 #endif
@@ -519,15 +544,14 @@ void thread_main(){
 				//-------------------------------------------------------Draw the point
 				cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
-				//Now, X = depth, Y = width and Z = height for matching axes of laser scan
-				if(nearest_p.x > 0.6f){
+				if(nearest_p.y > 0.6f){
 					isShuttleDetected = true;
 
 					//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
-					points.points.push_back(nearest_p);
 
 					geometry_msgs::Pose pose;
-					pose.position = nearest_p;
+					transformToGlobalFrame(&pose.position, &nearest_p, &robot_pose);
+					points.points.push_back(pose.position);
 					shuttle.poses.push_back(pose);
 
 					lastMinPoint = minPoint;

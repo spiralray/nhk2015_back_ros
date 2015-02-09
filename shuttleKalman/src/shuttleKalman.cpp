@@ -116,7 +116,7 @@ public:
 
 		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_kalman", 10);
 
-		shuttle_line.header.frame_id = "/laser";
+		shuttle_line.header.frame_id = "/map";
 		shuttle_line.header.stamp = ros::Time::now();
 		shuttle_line.ns = "shuttle_line";
 		shuttle_line.id = 0;
@@ -188,6 +188,20 @@ public:
 			A[(DP+1)*6 - 3] = R/mass * sec;
 			A[(DP+1)*7 - 3] = R/mass * sec;
 			A[(DP+1)*8 - 3] = R/mass * sec;
+
+#if 0
+			float A[DP * DP] = {
+					1.0,	0.0f,	0.0f,	 sec,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	1.0f,	0.0f,	0.0f,			 sec,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	1.0f,	0.0f,			0.0f,			 sec,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	1.0f,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			1.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			1.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	R/mass * sec,	0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			R/mass * sec,	0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			R/mass * sec,	0.0f,	0.0f,	0.0f
+			};
+#endif
 
 			memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
 
@@ -272,6 +286,20 @@ public:
 			A[(DP+1)*6 - 3] = R/mass * dt;
 			A[(DP+1)*7 - 3] = R/mass * dt;
 			A[(DP+1)*8 - 3] = R/mass * dt;
+
+#if 0
+			float A[DP * DP] = {
+					1.0,	0.0f,	0.0f,	  dt,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	1.0f,	0.0f,	0.0f,			  dt,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	1.0f,	0.0f,			0.0f,			  dt,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	1.0f,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			1.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			1.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	R/mass * dt,	0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			R/mass * dt,	0.0f,			0.0f,	0.0f,	0.0f,
+					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			R/mass * dt,	0.0f,	0.0f,	0.0f
+			};
+#endif
 
 			memcpy( kalmanOrbit->transition_matrix->data.fl, A, sizeof(A));
 
