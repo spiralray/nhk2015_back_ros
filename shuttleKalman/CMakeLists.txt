@@ -117,7 +117,6 @@ include_directories(
 ## Declare a cpp executable
 add_executable(shuttleKalman
   src/shuttleKalman.cpp
-  src/TimerManager.cpp
 )
 
 ## Add cmake target dependencies of the executable/library

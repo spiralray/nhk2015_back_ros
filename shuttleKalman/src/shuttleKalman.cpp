@@ -1,7 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/PointStamped.h>
-#include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
 
 #include <cv.h>
@@ -12,8 +11,6 @@
 
 #include <pthread.h>
 
-//http://codereview.stackexchange.com/questions/8611/linux-c-timer-class-how-can-i-improve-the-accuracy
-#include "TimerManager.h"
 #include <iostream>
 #include <fstream>
 #include <sys/time.h>
@@ -30,15 +27,6 @@ const double mass = 0.005;		//[kg]
 
 using namespace ShuttleConst;
 
-
-float gen_random_float(float min, float max)
-{
-    boost::mt19937 rng;
-    boost::uniform_real<float> u(min, max);
-    boost::variate_generator<boost::mt19937&, boost::uniform_real<float> > gen(rng, u);
-    return gen();
-}
-
 class Shuttle{
 public:
 
@@ -49,7 +37,7 @@ public:
 
 	ros::Time timeLastUpdate;
 
-	geometry_msgs::Pose oldPose;
+	geometry_msgs::PointStamped oldPoint;
 
 	CvKalman* kalman;
 
@@ -114,7 +102,7 @@ public:
 
 
 
-		marker_pub = nh.advertise<visualization_msgs::Marker>("shuttle_kalman", 10);
+		marker_pub = nh.advertise<visualization_msgs::Marker>("/shuttle/kalman", 10);
 
 		shuttle_line.header.frame_id = "/map";
 		shuttle_line.header.stamp = ros::Time::now();
@@ -133,24 +121,24 @@ public:
 		cvReleaseKalman(&kalman);
 	}
 
-	void update(const ros::Time time, const geometry_msgs::Pose& pose){
+	void update(const geometry_msgs::PointStamped& point){
 
-		double sec = time.toSec() - timeLastUpdate.toSec();
+		double sec = point.header.stamp.toSec() - timeLastUpdate.toSec();
 
 		if( sec > 0.3 || updated == 0 ){
 			//Resampling
 			updated = 1;
 
-			float A[DP] = { pose.position.x, pose.position.y, pose.position.z, 0, 0, 0, 0, 0, 0 };
+			float A[DP] = { point.point.x, point.point.y, point.point.z, 0, 0, 0, 0, 0, 0 };
 			memcpy( kalman->state_post->data.fl, A, sizeof(A));
 		}
 		else if( updated == 1 ){
 			updated = 2;
 
-			float A[DP] = { pose.position.x, pose.position.y, pose.position.z,
-					-(pose.position.x - kalman->transition_matrix->data.fl[0])/sec,
-					-(pose.position.y - kalman->transition_matrix->data.fl[1])/sec,
-					-(pose.position.z - kalman->transition_matrix->data.fl[2])/sec,
+			float A[DP] = { point.point.x, point.point.y, point.point.z,
+					-(point.point.x - kalman->transition_matrix->data.fl[0])/sec,
+					-(point.point.y - kalman->transition_matrix->data.fl[1])/sec,
+					-(point.point.z - kalman->transition_matrix->data.fl[2])/sec,
 					0, 0, 0 };
 			memcpy( kalman->state_post->data.fl, A, sizeof(A));
 		}
@@ -208,14 +196,14 @@ public:
 			predict( sec );
 
 
-			float m[MP] = {pose.position.x, pose.position.y ,pose.position.z };
+			float m[MP] = {point.point.x, point.point.y ,point.point.z };
 			CvMat measurement = cvMat(MP, 1, CV_32FC1, m);
 			const CvMat *correction = cvKalmanCorrect(kalman, &measurement);
 
 		}
 
-		oldPose = pose;
-		timeLastUpdate = time;
+		oldPoint = point;
+		timeLastUpdate = point.header.stamp;
 
 	}
 	void predict(double time){
@@ -332,19 +320,16 @@ public:
 Shuttle *shuttle;
 
 
-void pointsCallback(const geometry_msgs::PoseArray& posearray)
+void pointsCallback(const geometry_msgs::PointStamped& point)
 {
-	if( !posearray.poses.empty() ){
-		//ROS_INFO("update.");
 
-		shuttle->update(posearray.header.stamp,posearray.poses.at(0));
+	shuttle->update(point);
 
-		float *nowState = shuttle->getNowState();
-		shuttle->calc(nowState);
+	float *nowState = shuttle->getNowState();
+	shuttle->calc(nowState);
 
-		shuttle->publish();
+	shuttle->publish();
 
-	}
 }
 
 int main (int argc, char **argv)
@@ -353,7 +338,7 @@ int main (int argc, char **argv)
 
 	shuttle = new Shuttle();
 
-	ros::Subscriber subscriber = shuttle->nh.subscribe("shuttle_points", 1, pointsCallback);
+	ros::Subscriber subscriber = shuttle->nh.subscribe("/shuttle/point", 1, pointsCallback);
 
 	ros::spin();
 

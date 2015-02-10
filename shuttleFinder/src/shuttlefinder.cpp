@@ -10,8 +10,8 @@
 #include <sensor_msgs/image_encodings.h>
 
 #include <visualization_msgs/Marker.h>	//for displaying points of a shuttle
-#include <geometry_msgs/PoseArray.h>	//for publish points of a shuttle
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PointStamped.h>
 
 #include <pthread.h>
 #include <math.h>
@@ -158,16 +158,16 @@ void thread_main(){
 	//cv::BackgroundSubtractorMOG2 backGroundSubtractor;
 
 	ros::NodeHandle n;
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("shuttle_marker", 10);
+	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/shuttle/marker", 10);
 	ROS_INFO("Node shuttle_marker start...");
 
-	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PoseArray>("shuttle_points", 10);
+	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PointStamped>("/shuttle/point", 10);
 	ROS_INFO("Node shuttle_points start...");
 
 	CvBlobs blobs;
 
 	geometry_msgs::Pose lastPoint;
-	bool isShuttleDetected = false;
+	bool is_shuttle_found_at_last_frame = false;
 	cv::Point lastMinPoint(0,0);
 	int lastMin = 65535;
 
@@ -223,7 +223,7 @@ void thread_main(){
 
 		points.header.stamp = timestamp;
 
-		geometry_msgs::PoseArray shuttle;
+		geometry_msgs::PointStamped shuttle;
 		shuttle.header.stamp = timestamp;
 		shuttle.header.frame_id = "laser";
 
@@ -252,7 +252,7 @@ void thread_main(){
 
 		bool shuttle_found = false;
 
-		if( isShuttleDetected == true ){
+		if( is_shuttle_found_at_last_frame == true ){
 			//ROS_INFO("A shuttle is detected on the last frame");
 
 #define MARGIN_NEARPIXEL	45
@@ -358,10 +358,10 @@ void thread_main(){
 			if( count >= 40 ){
 				shuttle_found = true;
 
-				geometry_msgs::Pose pose;
-				transformToGlobalFrame(&pose.position, &nearest_p, &robot_pose);
-				points.points.push_back(pose.position);
-				shuttle.poses.push_back(pose);
+				geometry_msgs::Point point;
+				transformToGlobalFrame(&point, &nearest_p, &robot_pose);
+				points.points.push_back(point);
+				shuttle.point = point;
 
 				//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
 
@@ -374,7 +374,6 @@ void thread_main(){
 
 		if( !shuttle_found ){
 			//-----------------------------------------------------------
-
 			blobs.clear();
 
 			IplImage dstImg = foreGroundMask;
@@ -545,14 +544,14 @@ void thread_main(){
 				cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
 				if(nearest_p.y > 0.6f){
-					isShuttleDetected = true;
+					shuttle_found = true;
 
 					//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );
 
-					geometry_msgs::Pose pose;
-					transformToGlobalFrame(&pose.position, &nearest_p, &robot_pose);
-					points.points.push_back(pose.position);
-					shuttle.poses.push_back(pose);
+					geometry_msgs::Point point;
+					transformToGlobalFrame(&point, &nearest_p, &robot_pose);
+					points.points.push_back(point);
+					shuttle.point = point;
 
 					lastMinPoint = minPoint;
 					lastMin = min;
@@ -571,12 +570,15 @@ void thread_main(){
 		cvReleaseImage(&frame);
 
 
-		if( shuttle.poses.size() == 0 ){
-			isShuttleDetected = false;
-			lastPoint = shuttle.poses[0];
+		if( shuttle_found ){
+			is_shuttle_found_at_last_frame = true;
+
+			marker_pub.publish(points);
+			shuttle_pub.publish(shuttle);
+		}
+		else{
+			is_shuttle_found_at_last_frame = false;
 		}
 
-		marker_pub.publish(points);
-		shuttle_pub.publish(shuttle);
 	}
 }
