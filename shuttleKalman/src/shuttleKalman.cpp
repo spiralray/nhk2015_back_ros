@@ -59,48 +59,31 @@ public:
 
 		//cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
 		cvSetIdentity( kalman->process_noise_cov, cvRealScalar(1e-5) );
-		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-8) );
+		cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-7) );
 		cvSetIdentity( kalman->error_cov_post, cvRealScalar(1));
 
 
-		float A[DP * DP];
+		float M[MP * DP] = {
+				1.0,	0.0f,	0.0f,
+				0.0,	0.0f,	0.0f,
+				0.0,	0.0f,	0.0f,
+				0.0,	1.0f,	0.0f,
+				0.0,	0.0f,	0.0f,
+				0.0,	0.0f,	0.0f,
+				0.0,	0.0f,	1.0f,
+				0.0,	0.0f,	0.0f,
+				0.0,	0.0f,	0.0f
+		};
 
-		for( int i=0 ; i < DP * DP ; i++ ){
-			A[i]  = 0.0;
-		}
+		//cvZero( kalman->measurement_matrix );
+		memcpy( kalman->measurement_matrix->data.fl, M, sizeof(M));
 
-		A[0] = 1.0f;
-		A[DP+1] = 1.0f;
-		A[(DP+1)*2] = 1.0f;
-
-		A[(DP+1)*3] = 1.0f;
-		A[(DP+1)*4] = 1.0f;
-		A[(DP+1)*5] = 1.0f;
-
-		//A[(DP+1)*3 - DP*3] = dt;
-		//A[(DP+1)*4 - DP*3] = dt;
-		//A[(DP+1)*5 - DP*3] = dt;
-
-		//A[(DP+1)*6 - DP*3] = dt;
-		//A[(DP+1)*7 - DP*3] = dt;
-		//A[(DP+1)*8 - DP*3] = dt;
-
-		//A[(DP+1)*6 - 3] = c/m * dt;
-		//A[(DP+1)*7 - 3] = c/m * dt;
-		//A[(DP+1)*8 - 3] = c/m * dt;
-
-		memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
-
-
-		cvZero( kalman->measurement_matrix );
-		kalman->measurement_matrix->data.fl[0] = 1.0f;
-		kalman->measurement_matrix->data.fl[DP+1] = 1.0f;
-		kalman->measurement_matrix->data.fl[(DP+1)*2] = 1.0f;
+		ROS_INFO("measurement_matrix row:%d col:%d", kalman->measurement_matrix->rows, kalman->measurement_matrix->cols);
 
 		cvZero( kalman->control_matrix );
-		kalman->control_matrix->data.fl[ DP - 1 ] = -gravity;
+		kalman->control_matrix->data.fl[ 7 ] = -gravity;
 
-
+		ROS_INFO("control_matrix row:%d col:%d", kalman->control_matrix->rows, kalman->control_matrix->cols);
 
 		marker_pub = nh.advertise<visualization_msgs::Marker>("/shuttle/kalman", 10);
 
@@ -108,10 +91,10 @@ public:
 		shuttle_line.header.stamp = ros::Time::now();
 		shuttle_line.ns = "shuttle_line";
 		shuttle_line.id = 0;
-		shuttle_line.type = visualization_msgs::Marker::LINE_LIST;
+		shuttle_line.type = visualization_msgs::Marker::POINTS;
 		shuttle_line.action = visualization_msgs::Marker::ADD;
 
-		shuttle_line.scale.x = 0.03;
+		shuttle_line.scale.x = 0.1;
 
 		shuttle_line.color.b = 1.0;
 		shuttle_line.color.a = 1.0;
@@ -129,67 +112,41 @@ public:
 			//Resampling
 			updated = 1;
 
-			float A[DP] = { point.point.x, point.point.y, point.point.z, 0, 0, 0, 0, 0, 0 };
+			float A[DP] = {
+					point.point.x, 0, 0,
+					point.point.y, 0, 0,
+					point.point.z, 0, 0
+			};
 			memcpy( kalman->state_post->data.fl, A, sizeof(A));
 		}
 		else if( updated == 1 ){
 			updated = 2;
 
-			float A[DP] = { point.point.x, point.point.y, point.point.z,
-					-(point.point.x - kalman->transition_matrix->data.fl[0])/sec,
-					-(point.point.y - kalman->transition_matrix->data.fl[1])/sec,
-					-(point.point.z - kalman->transition_matrix->data.fl[2])/sec,
-					0, 0, 0 };
+			float A[DP] = {
+				point.point.x,	-(point.point.x - kalman->transition_matrix->data.fl[0])/sec,	0.0f,
+				point.point.y,	-(point.point.y - kalman->transition_matrix->data.fl[3])/sec,	0.0f,
+				point.point.z,	-(point.point.z - kalman->transition_matrix->data.fl[6])/sec,	0.0f
+			};
 			memcpy( kalman->state_post->data.fl, A, sizeof(A));
 		}
 		else{
 			updated = 3;
 
+			double v = sqrt( kalman->transition_matrix->data.fl[3]*kalman->transition_matrix->data.fl[3]+ kalman->transition_matrix->data.fl[4]*kalman->transition_matrix->data.fl[4] + kalman->transition_matrix->data.fl[5]*kalman->transition_matrix->data.fl[5]);	//speed of the shuttle
 
-			float A[DP * DP];
+			double R = resist_coeff * v; //Air resistance
 
-			for( int i=0 ; i < DP * DP ; i++ ){
-				A[i]  = 0.0;
-			}
-
-			A[0] = 1.0f;
-			A[DP+1] = 1.0f;
-			A[(DP+1)*2] = 1.0f;
-
-			A[(DP+1)*3] = 1.0f;
-			A[(DP+1)*4] = 1.0f;
-			A[(DP+1)*5] = 1.0f;
-
-			A[(DP+1)*3 - DP*3] = sec;
-			A[(DP+1)*4 - DP*3] = sec;
-			A[(DP+1)*5 - DP*3] = sec;
-
-			A[(DP+1)*6 - DP*3] = sec;
-			A[(DP+1)*7 - DP*3] = sec;
-			A[(DP+1)*8 - DP*3] = sec;
-
-			double v = sqrt( kalman->transition_matrix->data.fl[3]*kalman->transition_matrix->data.fl[3]+ kalman->transition_matrix->data.fl[4]*kalman->transition_matrix->data.fl[4] + kalman->transition_matrix->data.fl[5]*kalman->transition_matrix->data.fl[5]
-			);	//speed of the shuttle
-
-			double R = resist_coeff * v*v; //Air resistance
-
-			A[(DP+1)*6 - 3] = R/mass * sec;
-			A[(DP+1)*7 - 3] = R/mass * sec;
-			A[(DP+1)*8 - 3] = R/mass * sec;
-
-#if 0
 			float A[DP * DP] = {
-					1.0,	0.0f,	0.0f,	 sec,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	1.0f,	0.0f,	0.0f,			 sec,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	1.0f,	0.0f,			0.0f,			 sec,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	1.0f,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			1.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			1.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	R/mass * sec,	0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			R/mass * sec,	0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			R/mass * sec,	0.0f,	0.0f,	0.0f
+					1.0,			 sec,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			1.0f,	 sec,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,	 	 -R/mass,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	1.0f,			 sec,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			1.0f,	 sec,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,	 	 -R/mass,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	1.0f,			 sec,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			1.0f,	 sec,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,	 	 -R/mass,	0.0f
 			};
-#endif
 
 			memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
 
@@ -199,6 +156,11 @@ public:
 			float m[MP] = {point.point.x, point.point.y ,point.point.z };
 			CvMat measurement = cvMat(MP, 1, CV_32FC1, m);
 			const CvMat *correction = cvKalmanCorrect(kalman, &measurement);
+
+			ROS_INFO("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f",
+					kalman->state_post->data.fl[0], kalman->state_post->data.fl[1], kalman->state_post->data.fl[2],
+					kalman->state_post->data.fl[3], kalman->state_post->data.fl[4], kalman->state_post->data.fl[5],
+					kalman->state_post->data.fl[6], kalman->state_post->data.fl[7], kalman->state_post->data.fl[8]);
 
 		}
 
@@ -237,28 +199,6 @@ public:
 		memcpy( kalmanOrbit->control_matrix->data.fl, kalman->control_matrix->data.fl, sizeof(float)*DP*CP  );
 
 
-		float A[DP * DP];
-
-		for( int i=0 ; i < DP * DP ; i++ ){
-			A[i]  = 0.0;
-		}
-
-		A[0] = 1.0f;
-		A[DP+1] = 1.0f;
-		A[(DP+1)*2] = 1.0f;
-
-		A[(DP+1)*3] = 1.0f;
-		A[(DP+1)*4] = 1.0f;
-		A[(DP+1)*5] = 1.0f;
-
-		A[(DP+1)*3 - DP*3] = dt;
-		A[(DP+1)*4 - DP*3] = dt;
-		A[(DP+1)*5 - DP*3] = dt;
-
-		A[(DP+1)*6 - DP*3] = dt;
-		A[(DP+1)*7 - DP*3] = dt;
-		A[(DP+1)*8 - DP*3] = dt;
-
 		_last_point.x = kalmanOrbit->state_post->data.fl[0];
 		_last_point.y = kalmanOrbit->state_post->data.fl[1];
 		_last_point.z = kalmanOrbit->state_post->data.fl[2];
@@ -269,25 +209,20 @@ public:
 			double v = sqrt( kalmanOrbit->transition_matrix->data.fl[3]*kalmanOrbit->transition_matrix->data.fl[3]+ kalmanOrbit->transition_matrix->data.fl[4]*kalmanOrbit->transition_matrix->data.fl[4] + kalmanOrbit->transition_matrix->data.fl[5]*kalmanOrbit->transition_matrix->data.fl[5]
 			);	//speed of the shuttle
 
-			double R = resist_coeff * v*v; //Air resistance
+			double R = resist_coeff * v; //Air resistance
 
-			A[(DP+1)*6 - 3] = R/mass * dt;
-			A[(DP+1)*7 - 3] = R/mass * dt;
-			A[(DP+1)*8 - 3] = R/mass * dt;
-
-#if 0
 			float A[DP * DP] = {
-					1.0,	0.0f,	0.0f,	  dt,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	1.0f,	0.0f,	0.0f,			  dt,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	1.0f,	0.0f,			0.0f,			  dt,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	1.0f,			0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			1.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			1.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	R/mass * dt,	0.0f,			0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			R/mass * dt,	0.0f,			0.0f,	0.0f,	0.0f,
-					0.0,	0.0f,	0.0f,	0.0f,			0.0f,			R/mass * dt,	0.0f,	0.0f,	0.0f
+					1.0,			  dt,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			1.0f,	  dt,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,	     -R/mass,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	1.0f,			  dt,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			1.0f,	  dt,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,	     -R/mass,	0.0f,	0.0f,			0.0f,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	1.0f,			  dt,	0.0f,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,			1.0f,	  dt,
+					0.0,			0.0f,	0.0f,	0.0f,			0.0f,	0.0f,	0.0f,	     -R/mass,	0.0f
 			};
-#endif
+
 
 			memcpy( kalmanOrbit->transition_matrix->data.fl, A, sizeof(A));
 
@@ -296,13 +231,13 @@ public:
 			const CvMat *prediction = cvKalmanPredict( kalmanOrbit, &control );
 
 			_point.x = kalmanOrbit->state_post->data.fl[0];
-			_point.y = kalmanOrbit->state_post->data.fl[1];
-			_point.z = kalmanOrbit->state_post->data.fl[2];
+			_point.y = kalmanOrbit->state_post->data.fl[3];
+			_point.z = kalmanOrbit->state_post->data.fl[6];
 
-			shuttle_line.points.push_back(_last_point);
+			//shuttle_line.points.push_back(_last_point);
 			shuttle_line.points.push_back(_point);
 			_last_point = _point;
-			if( _point.z <= 0.0f ) break;
+			//if( _point.z <= 0.0f ) break;
 		}
 	}
 
