@@ -33,12 +33,13 @@ if __name__ == '__main__':
     tx = []
     ty = []
     tz = []
-    truth = shuttle.Shuttle( np.mat([[0],[0],[0.79],[0],[26.3983602458],[20.6246594234],[0],[0],[0]]) )
+    truth = shuttle.Shuttle( np.mat([[0],[0],[0.79],[0],[20.6246594234],[26.3983602458],[0],[0],[0]]) )
+    print "[{0:8.3f} {1:8.3f} {2:8.3f} {3:8.3f} {4:8.3f} {5:8.3f} {6:8.3f} {7:8.3f} {8:8.3f}]".format(truth.mu[0,0],truth.mu[1,0],truth.mu[2,0],truth.mu[3,0],truth.mu[4,0],truth.mu[5,0],truth.mu[6,0],truth.mu[7,0],truth.mu[8,0])
     
     x = []
     y = []
     z = []
-    s = shuttle.Shuttle( np.mat([[0],[0],[0.79],[0],[26.3983602458],[20.6246594234],[0],[0],[0]]) )
+    s = shuttle.Shuttle( np.mat([[0],[0],[0.79],[0],[20.6246594234],[26.3983602458],[0],[0],[0]]) )
     
     ox = []
     oy = []
@@ -50,13 +51,15 @@ if __name__ == '__main__':
     
     random.seed()
     
-    for i in range(0, 100):
-        truth.predict(0.03)
+    for i in range(0, 500):
+        truth.predict(0.005)
         tx.append(truth.mu[0,0])
         ty.append(truth.mu[1,0])
         tz.append(truth.mu[2,0])
         
-        s.predict(0.03)
+        #print "[{0:8.3f} {1:8.3f} {2:8.3f} {3:8.3f} {4:8.3f} {5:8.3f} {6:8.3f} {7:8.3f} {8:8.3f}]".format(truth.mu[0,0],truth.mu[1,0],truth.mu[2,0],truth.mu[3,0],truth.mu[4,0],truth.mu[5,0],truth.mu[6,0],truth.mu[7,0],truth.mu[8,0])
+        
+        s.predict(0.005)
         x.append(s.mu[0,0])
         y.append(s.mu[1,0])
         z.append(s.mu[2,0])
@@ -75,3 +78,4 @@ if __name__ == '__main__':
     
     plt.show()
     
+        

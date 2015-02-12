@@ -78,7 +78,7 @@ def callback(msg):
                 s.predict(dt/10)
             s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z] ]) )
             
-            print s.mu.T
+            #print s.mu.T
             
             predictOrbit(copy.copy(s.mu))
         
