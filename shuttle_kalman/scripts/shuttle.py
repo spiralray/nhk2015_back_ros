@@ -14,7 +14,7 @@ import math
 class Shuttle:
     resist_coeff = 0.001075
     gravity = 9.812
-    mass = 0.00467
+    mass = 0.005
     
     def __init__(self, mu):
         self.mu = mu
@@ -32,8 +32,8 @@ class Shuttle:
             [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,-self.gravity] ])
         
-        self.Q = np.eye(9)
-        self.R = np.eye(3)
+        self.Q = np.eye(9)*0.1**1
+        self.R = np.eye(3)*0.1**3
 
     def getA(self, mu, period):   #Observation matrix
         airR = -self.resist_coeff * math.sqrt(mu[3,0]**2 + mu[4,0]**2 + mu[5,0]**2 ) / self.mass
