@@ -159,10 +159,7 @@ void thread_main(){
 
 	ros::NodeHandle n;
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/shuttle/marker", 10);
-	ROS_INFO("Node shuttle_marker start...");
-
 	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PointStamped>("/shuttle/point", 10);
-	ROS_INFO("Node shuttle_points start...");
 
 	CvBlobs blobs;
 
@@ -197,7 +194,7 @@ void thread_main(){
 
 		//wait for recieve new frame
 		while(recieved == false){
-			sleep(1);
+			ros::Duration(0.001).sleep();
 		}
 
 		cv::Mat depthMat;
@@ -205,10 +202,9 @@ void thread_main(){
 		//Get new frame
 
 		pthread_mutex_lock( &pose_mutex );
+		pthread_mutex_lock( &mutex );
 		robot_pose = _pose;
 		pthread_mutex_unlock( &pose_mutex );
-
-		pthread_mutex_lock( &mutex );
 
 		if( timestamp == depth_timestamp){
 			pthread_mutex_unlock( &mutex );
@@ -217,6 +213,9 @@ void thread_main(){
 
 		depth_frame.copyTo(depthMat);
 		timestamp = depth_timestamp;
+
+		recieved = false;
+
 		pthread_mutex_unlock( &mutex );
 
 		cv::Mat depthMat8bit(depthMat);
