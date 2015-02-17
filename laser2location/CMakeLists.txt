@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(shuttleKalman)
+project(laser2location)
 
 set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -13,8 +13,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Warray-bounds -Wtype-limits -Wreturn-ty
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+
+find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  OpenCV
   roscpp
   sensor_msgs
   cv_bridge
@@ -92,7 +93,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES listener
+#  LIBRARIES laser2location
 #  CATKIN_DEPENDS OpenCV roscpp sensor_msgs
 #  DEPENDS system_lib
 )
@@ -106,27 +107,23 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  include
 )
 
 ## Declare a cpp library
-# add_library(listener
-#   src/${PROJECT_NAME}/listener.cpp
+# add_library(laser2location
+#   src/${PROJECT_NAME}/laser2location.cpp
 # )
 
 ## Declare a cpp executable
-add_executable(shuttleKalman
-  src/shuttleKalman.cpp
-)
+add_executable(laser2location src/laser2location.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(shuttleKalman listener_generate_messages_cpp)
+# add_dependencies(laser2location listener_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(shuttleKalman
+ target_link_libraries(laser2location
    ${catkin_LIBRARIES}
-   cvblob
  )
 
 #############
@@ -144,7 +141,7 @@ add_executable(shuttleKalman
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS listener shuttleKalman
+# install(TARGETS laser2location laser2location
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

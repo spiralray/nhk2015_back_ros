@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>laserlistener</name>
+  <name>laser2location</name>
   <version>0.0.0</version>
   <description>The listener package</description>
 
