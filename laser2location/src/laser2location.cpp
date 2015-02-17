@@ -22,6 +22,7 @@ int threshold;
 
 #define DISTANCE_LRF_TO_CENTER	0.455	//[m]
 #define FENCE_WIDTH				0.04	//[m]
+#define FENCE_DEPTH				8.2
 
 pthread_mutex_t	mutex;  // MUTEX
 sensor_msgs::LaserScan lasermsg;
@@ -50,7 +51,7 @@ void LaserCallback(const sensor_msgs::LaserScan& msg)
 
 int main(int argc, char** argv){
 
-	ros::init(argc, argv, "laserlistener");
+	ros::init(argc, argv, "laser2location");
 	ros::NodeHandle n;
 	ros::NodeHandle local_nh("~");
 
@@ -316,7 +317,7 @@ void thread_main(){
 		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(-yaw-M_PI/2);
 		pose.pose.position.y += DISTANCE_LRF_TO_CENTER*sin(-yaw-M_PI/2);
 
-		pose.pose.position.y += FENCE_WIDTH / 2;
+		pose.pose.position.y += FENCE_WIDTH / 2 + FENCE_DEPTH;
 
 		//pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(yaw+M_PI/2);
 		//pose.pose.position.y -= DISTANCE_LRF_TO_CENTER*sin(yaw+M_PI/2);

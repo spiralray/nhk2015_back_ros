@@ -117,7 +117,7 @@ void transformToGlobalFrame( geometry_msgs::Point* output, const geometry_msgs::
 }
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "image_listener");
+  ros::init(argc, argv, "shuttleFinder");
   ros::NodeHandle nh;
 
   cv::startWindowThread();
