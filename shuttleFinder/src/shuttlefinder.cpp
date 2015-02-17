@@ -40,7 +40,7 @@ protected:
 	float kinect_sin,kinect_cos;
 public:
 	KinectV2(){
-		setKinectRad(30*M_PI/180);
+		setKinectRad(25*M_PI/180);
 	}
 
 	void setKinectRad(float rad){

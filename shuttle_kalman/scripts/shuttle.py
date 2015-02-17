@@ -12,9 +12,9 @@ import numpy as np
 import math
 
 class Shuttle:
-    resist_coeff = 0.001075
+    resist_coeff = 0.0008
     gravity = 9.8
-    mass = 0.00467
+    mass = 0.005
 
     
     def __init__(self, mu):
@@ -28,7 +28,7 @@ class Shuttle:
             [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,-self.gravity,0,0,0],
+            [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,-self.gravity] ])

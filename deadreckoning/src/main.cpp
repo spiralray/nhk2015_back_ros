@@ -1,5 +1,6 @@
-#include "ros/ros.h"
-#include "std_msgs/Int32.h"
+#include <ros/ros.h>
+#include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/PoseStamped.h>
 
@@ -58,10 +59,10 @@ void encYCallback(const std_msgs::Int32::ConstPtr& msg)
 	}
 	old_y = msg->data;
 	pub.publish(pose_msg);
-	ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, pose_msg.pose.position.x, pose_msg.pose.position.y);
+	//ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, pose_msg.pose.position.x, pose_msg.pose.position.y);
 }
 
-void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
+void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 {
 	static bool isFirst = true;
 
@@ -71,7 +72,7 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 	if(!isFirst){
 		//float roll = atan2(2.0*(msg->orientation.y*msg->orientation.z + msg->orientation.w*msg->orientation.x), msg->orientation.w*msg->orientation.w - msg->orientation.x*msg->orientation.x - msg->orientation.y*msg->orientation.y + msg->orientation.z*msg->orientation.z);
 		//float pitch = asin(-2.0*(msg->orientation.x*msg->orientation.z - msg->orientation.w*msg->orientation.y));
-		yaw = -atan2(2.0*(msg->orientation.x*msg->orientation.y + msg->orientation.w*msg->orientation.z), msg->orientation.w*msg->orientation.w + msg->orientation.x*msg->orientation.x - msg->orientation.y*msg->orientation.y - msg->orientation.z*msg->orientation.z)-yawfirst;
+		yaw = msg->data;
 
 		float cr2 = cos(0*0.5);
 		float cp2 = cos(0*0.5);
@@ -86,12 +87,12 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 		pose_msg.pose.orientation.z = cr2*cp2*sy2 - sr2*sp2*cy2;
 
 		pub.publish(pose_msg);
-		ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, pose_msg.pose.position.x, pose_msg.pose.position.y);
+		//ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, pose_msg.pose.position.x, pose_msg.pose.position.y);
 	}
 	//ROS_INFO("yaw pitch roll: [%f][%f][%f]", yaw,pitch,roll);
 	else{
 		isFirst = false;
-		yawfirst = -atan2(2.0*(msg->orientation.x*msg->orientation.y + msg->orientation.w*msg->orientation.z), msg->orientation.w*msg->orientation.w + msg->orientation.x*msg->orientation.x - msg->orientation.y*msg->orientation.y - msg->orientation.z*msg->orientation.z);
+		yawfirst = msg->data;
 	}
 }
 
@@ -111,7 +112,7 @@ void laserCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
 
 		pub.publish(pose_msg);
-		ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, msg->pose.position.x, msg->pose.position.y);
+		//ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, msg->pose.position.x, msg->pose.position.y);
 	}
 	//ROS_INFO("yaw pitch roll: [%f][%f][%f]", yaw,pitch,roll);
 	else{
@@ -128,10 +129,10 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle n;
 
-	ros::Subscriber subX = n.subscribe("encX", 1000, encXCallback);
-	ros::Subscriber subY = n.subscribe("encY", 1000, encYCallback);
-	ros::Subscriber subIMU = n.subscribe("imu", 1000, imuCallback);
-	ros::Subscriber subPose = n.subscribe("lrf_pose", 1000, laserCallback);
+	ros::Subscriber subX = n.subscribe("/encX", 1000, encXCallback);
+	ros::Subscriber subY = n.subscribe("/encY", 1000, encYCallback);
+	ros::Subscriber subIMU = n.subscribe("/yaw", 1000, imuCallback);
+	ros::Subscriber subPose = n.subscribe("/lrf_pose", 1000, laserCallback);
 
 	pose_msg.header.frame_id = "/map";
 	pose_msg.pose.position.x = pose_msg.pose.position.y = pose_msg.pose.position.z = 0.0f;
