@@ -41,14 +41,14 @@ def predictOrbit(mu):
     point_list = []
     p = Point()
     k = shuttle.Shuttle( mu )
-    for var in range(0, 200):
+    for var in range(0, 2000):
         p.x = k.mu[0]
         p.y = k.mu[1]
         p.z = k.mu[2]
         point_list.append(copy.copy(p))
         if k.mu[2] <= 0:
             break
-        k.predict(0.005)
+        k.predict(0.01)
         
     updateMarker(point_list)
     
@@ -63,7 +63,7 @@ def callback(msg):
     
     else:
         dt = msg.header.stamp.to_sec() - lastmsg.header.stamp.to_sec()
-        if dt > 0.3:
+        if abs(dt) > 0.3:
             updated = 1;
             
         elif updated == 1:

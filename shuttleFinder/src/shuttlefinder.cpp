@@ -68,8 +68,8 @@ public:
 		float tz = (float)(depth);
 
 		result.x = tx;
-		result.z = ty*kinect_cos + tz*kinect_sin;
-		result.y = ty*kinect_sin + tz*kinect_cos;
+		result.z = ty*kinect_cos + tz*kinect_sin+1.428;
+		result.y = ty*kinect_sin + tz*kinect_cos-0.425;
 		return result;
 	}
 };
@@ -542,7 +542,7 @@ void thread_main(){
 				//-------------------------------------------------------Draw the point
 				cvCircle(frame, minPoint, 10, CV_RGB(255,0,0),3);
 
-				if(nearest_p.y > 0.6f){
+				if(depthMat.at<unsigned short>(minPoint.y,minPoint.x) > 600){
 					shuttle_found = true;
 
 					//ROS_INFO("%.4f, %f, %f, %f", timestamp.toSec(), nearest_p.x, nearest_p.y, nearest_p.z );

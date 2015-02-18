@@ -34,7 +34,7 @@ class Shuttle:
             [0,0,0,0,0,0,0,0,-self.gravity] ])
         
         self.Q = np.eye(9)
-        self.R = np.eye(3)*5
+        self.R = np.eye(3)
         
         #To set acceleration
         self.predict(0.00)
