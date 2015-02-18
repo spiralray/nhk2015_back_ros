@@ -1,0 +1,5 @@
+<launch>
+  <param name="/canusb/baud" value="500k" />
+  <param name="/canusb/port" value="/canusb/port /dev/serial/by-id/usb-LAWICEL_CANUSB_LWWSPU28-if00-port0" />
+  <node name="canusb" pkg="canusb" type="canusb.py" />
+</launch>
