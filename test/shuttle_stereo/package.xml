@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>shuttleStereo</name>
+  <name>shuttle_stereo</name>
   <version>0.0.0</version>
   <description>The listener package</description>
 

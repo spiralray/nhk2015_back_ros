@@ -158,7 +158,7 @@ void thread_main(){
 	//cv::BackgroundSubtractorMOG2 backGroundSubtractor;
 
 	ros::NodeHandle n;
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/shuttle/marker", 10);
+	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/shuttle/marker", 1);
 	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PointStamped>("/shuttle/point", 10);
 
 	CvBlobs blobs;

@@ -122,7 +122,10 @@ void thread_main( libfreenect2::Freenect2Device *dev ){
 
 	while(!sflag)
 	{
+		std_msgs::Header head = std_msgs::Header();
 		listener.waitForNewFrame(frames);
+		head.stamp = ros::Time::now();
+
 		libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
 		libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
@@ -134,19 +137,19 @@ void thread_main( libfreenect2::Freenect2Device *dev ){
 		if( enableRGB ){
 			cv::Mat rgbMat = cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data);
 			cv::cvtColor( rgbMat, rgbMat, CV_BGR2RGB);
-			sensor_msgs::ImagePtr rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgb8", rgbMat ).toImageMsg();
+			sensor_msgs::ImagePtr rgb_msg = cv_bridge::CvImage(head, "rgb8", rgbMat ).toImageMsg();
 			rgb_pub.publish(rgb_msg);
 		}
 
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
 		depthMat.convertTo(depthMat, CV_16UC1, 1.0f);
-		sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depthMat ).toImageMsg();
+		sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(head, "mono16", depthMat ).toImageMsg();
 		depth_pub.publish(depth_msg);
 
 		if( enableIR ){
 			cv::Mat irMat = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f;
 			irMat.convertTo(irMat, CV_8UC1, 255.0f);
-			sensor_msgs::ImagePtr ir_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", irMat ).toImageMsg();
+			sensor_msgs::ImagePtr ir_msg = cv_bridge::CvImage(head, "mono8", irMat ).toImageMsg();
 			ir_pub.publish(ir_msg);
 		}
 

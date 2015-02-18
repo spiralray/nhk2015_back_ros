@@ -12,45 +12,14 @@ import shuttle
 import numpy as np
 import copy
 
-
 import sys
 import roslib
 import rospy
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import PointStamped
-from visualization_msgs.msg import Marker
+from _shuttle_msg import shuttle_msg
 
 updated = 0
-
-def updateMarker(point_list):
-    marker = Marker()
-    marker.header.frame_id = "/map"
-    marker.points = point_list
-    marker.type = marker.POINTS
-    marker.action = marker.ADD
-    marker.scale.x = 0.1
-    marker.scale.y = 0.1
-    marker.scale.z = 0.1
-    marker.color.a = 1.0
-    marker.color.r = 1.0
-    marker.color.g = 1.0
-    marker.color.b = 0.0
-    markerPub.publish(marker)
-    
-def predictOrbit(mu):
-    point_list = []
-    p = Point()
-    k = shuttle.Shuttle( mu )
-    for var in range(0, 2000):
-        p.x = k.mu[0]
-        p.y = k.mu[1]
-        p.z = k.mu[2]
-        point_list.append(copy.copy(p))
-        if k.mu[2] <= 0:
-            break
-        k.predict(0.01)
-        
-    updateMarker(point_list)
     
 
 def callback(msg):
@@ -77,10 +46,15 @@ def callback(msg):
             for var in range(0, 10):
                 s.predict(dt/10)
             s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z] ]) )
-            
             #print s.mu.T
             
-            predictOrbit(copy.copy(s.mu))
+            pubmsg = shuttle_msg()
+            pubmsg.stamp = msg.header.stamp
+            pubmsg.data = []
+            for i in range(0, 9):
+                pubmsg.data.append(s.mu[i,0])
+            pub.publish(pubmsg)
+            
         
     lastmsg = msg
         
@@ -94,8 +68,7 @@ if __name__ == '__main__':
     lastmsg = PointStamped()
     lastmsg.header.stamp = rospy.Time.now()
     
-    markerPub = rospy.Publisher('/shuttle/kalman', Marker, queue_size=1)
-    
+    pub = rospy.Publisher('/shuttle/status', shuttle_msg, queue_size=1)
     rospy.Subscriber("/shuttle/point", PointStamped, callback)
     rospy.spin()
     

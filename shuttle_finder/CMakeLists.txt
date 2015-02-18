@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(shuttleStereo)
+project(shuttle_finder)
 
 set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -114,14 +114,14 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(shuttleStereo src/main.cpp)
+add_executable(shuttle_finder src/shuttle_finder.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(shuttleStereo listener_generate_messages_cpp)
+# add_dependencies(shuttle_finder listener_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(shuttleStereo
+ target_link_libraries(shuttle_finder
    ${catkin_LIBRARIES}
    cvblob
  )
@@ -141,7 +141,7 @@ add_executable(shuttleStereo src/main.cpp)
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS listener shuttleStereo
+# install(TARGETS listener shuttle_finder
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
