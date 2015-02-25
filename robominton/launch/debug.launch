@@ -7,6 +7,7 @@
   <node name="shuttle_finder" pkg="shuttle_finder" type="shuttle_finder" />
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
+  <node name="shuttle_kalman_pose" pkg="shuttle_kalman" type="calc_pose.py" />
 
   <node name="deadreckoning" pkg="deadreckoning" type="deadreckoning" />
 

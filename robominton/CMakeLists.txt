@@ -4,10 +4,13 @@ project(robominton)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  cv_bridge
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,6 +107,7 @@ include_directories(
 
 ## Declare a cpp executable
 # add_executable(robominton_node src/robominton_node.cpp)
+ add_executable(disp src/disp.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -113,6 +117,9 @@ include_directories(
 # target_link_libraries(robominton_node
 #   ${catkin_LIBRARIES}
 # )
+ target_link_libraries(disp
+   ${catkin_LIBRARIES}
+ )
 
 #############
 ## Install ##
