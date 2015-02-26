@@ -71,7 +71,7 @@ if __name__ == '__main__':
     
     s = shuttle.Shuttle( np.mat([[0],[0],[0],[0],[0],[0],[0],[0],[0]]) )
     
-    markerPub = rospy.Publisher('/shuttle/kalman', Marker, queue_size=1)
+    markerPub = rospy.Publisher('/shuttle/orbit', Marker, queue_size=1)
     
     rospy.Subscriber("/shuttle/status", shuttle_msg, callback)
     rospy.Timer(rospy.Duration(0.05), time_callback)
