@@ -10,7 +10,6 @@ Created on 2015/02/11
 import shuttle
 
 import numpy as np
-import copy
 
 import sys
 import roslib
@@ -45,7 +44,8 @@ def callback(msg):
         else:
             for var in range(0, 10):
                 s.predict(dt/10)
-            s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z] ]) )
+            dt = msg.header.stamp.to_sec() - lastmsg.header.stamp.to_sec()
+            s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z],[ (msg.point.x - lastmsg.point.x)/dt],[(msg.point.y - lastmsg.point.y)/dt],[(msg.point.z - lastmsg.point.z)/dt] ]) )
             #print s.mu.T
             
             pubmsg = shuttle_msg()
