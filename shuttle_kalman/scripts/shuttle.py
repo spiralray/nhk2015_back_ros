@@ -22,7 +22,7 @@ class Shuttle:
         
         self.PEst = np.eye(9)
         
-        self.Q = np.diag([0.05,0.05,0.05,1.,1.,1.,1.,1.,1.])*(10**-1)
+        self.Q = np.diag([0.05,0.05,0.05,10.,10.,10.,1.,1.,1.])*(10**-2)
         self.R = np.diag([0.05,0.05,0.05,10.,10.,10.])*(10**-1)
         
         #To set acceleration
