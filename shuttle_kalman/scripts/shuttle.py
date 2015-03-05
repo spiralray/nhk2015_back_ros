@@ -20,20 +20,15 @@ class Shuttle:
     def __init__(self, mu):
         self.mu = mu
         
-        self.Sigma = np.zeros((9,9))
+        self.PEst = np.eye(9)
         
-        self.Q = np.eye(9)*(10**1)
-        self.R = np.mat([
-            [1,0,0,0,0,0],
-            [0,1,0,0,0,0],
-            [0,0,1,0,0,0],
-            [0,0,0,10**2,0,0],
-            [0,0,0,0,10**2,0],
-            [0,0,0,0,0,10**2]
-        ])
+        self.Q = np.diag([0.05,0.05,0.05,1.,1.,1.,1.,1.,1.])*(10**-1)
+        self.R = np.diag([0.05,0.05,0.05,10.,10.,10.])*(10**-1)
         
         #To set acceleration
         self.predict(0.00)
+        
+        self.PEst = np.eye(9)
         
     def getB(self, period):
         return np.mat([
@@ -78,15 +73,15 @@ class Shuttle:
         self.u = np.mat([[-self.gravity]])
         # prediction
         self.mu = self.A * self.mu + self.B * self.u
-        self.Sigma_ = self.Q + self.A * self.Sigma * self.A.T
+        self.PPred = self.Q + self.A * self.PEst * self.A.T
         
     def update(self, Y):    #Y Observation value
-        self.C = self.Jh(self.mu)
-        self.yi = Y - self.C * self.mu
-        self.S = self.C * self.Sigma_ * self.C.T + self.R
-        self.K = self.Sigma_ * self.C.T * self.S.I
-        self.mu = self.mu + self.K * self.yi
-        self.Sigma = self.Sigma_ - self.K * self.C * self.Sigma
+        H = self.Jh(self.mu)
+        y = Y - H * self.mu
+        S = H * self.PPred * H.T + self.R
+        K = self.PPred * H.T * S.I
+        self.mu = self.mu + K * y
+        self.PEst = ( np.eye( math.sqrt(np.size(self.PEst)) ) - K * H) * self.PPred
         
     def getState(self):
         return self.mu
