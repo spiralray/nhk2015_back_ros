@@ -45,7 +45,7 @@ def callback(msg):
             for var in range(0, 10):
                 s.predict(dt/10)
             dt = msg.header.stamp.to_sec() - lastmsg.header.stamp.to_sec()
-            s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z],[ (msg.point.x - lastmsg.point.x)/dt],[(msg.point.y - lastmsg.point.y)/dt],[(msg.point.z - lastmsg.point.z)/dt] ]) )
+            s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z] ]) )
             #print s.mu.T
             
             pubmsg = shuttle_msg()
