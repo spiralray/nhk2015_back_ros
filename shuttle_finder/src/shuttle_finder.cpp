@@ -34,13 +34,15 @@ bool endflag = false;
 pthread_mutex_t	pose_mutex;  // MUTEX
 geometry_msgs::Pose _pose;
 
+float kinect_pitch=0.0f;
+
 class KinectV2{
 protected:
 	float kinect_rad;
 	float kinect_sin,kinect_cos;
 public:
 	KinectV2(){
-		setKinectRad(25*M_PI/180);
+		setKinectRad(0.0f*M_PI/180);
 	}
 
 	void setKinectRad(float rad){
@@ -68,8 +70,8 @@ public:
 		float tz = (float)(depth);
 
 		result.x = tx;
-		result.z = ty*kinect_cos + tz*kinect_sin+1.428;
-		result.y = ty*kinect_sin + tz*kinect_cos-0.425;
+		result.z = ty*kinect_cos + tz*kinect_sin+1.415;
+		result.y = ty*kinect_sin + tz*kinect_cos-0.383;
 		return result;
 	}
 };

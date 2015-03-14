@@ -44,8 +44,8 @@ def getTransformMatrixToRacketCoordinate():
         ])
     A =  np.mat([
           [1,0,0,0],
-         [0,1,0,-0.206],
-         [0,0,1,-0.726],
+         [0,1,0,-0.222],
+         [0,0,1,-0.658],
          [0,0,0,1]
         ])
     At =  np.mat([
@@ -93,10 +93,10 @@ def predictOrbit(mu):
             slide_x = t[0,0] - racket_x
                 
                 
-            if slide_x > 0.25:
-                slide_x = 0.25
-            elif slide_x < -0.25:
-                slide_x = -0.25
+            if slide_x > 0.24:
+                slide_x = 0.24
+            elif slide_x < -0.24:
+                slide_x = -0.24
                 
             roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
             slide_pub.publish( std_msgs.msg.Float32(slide_x) )
