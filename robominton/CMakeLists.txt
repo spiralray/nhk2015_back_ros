@@ -83,7 +83,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES robominton
 #  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
@@ -98,6 +98,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  include
 )
 
 ## Declare a cpp library
@@ -108,6 +109,7 @@ include_directories(
 ## Declare a cpp executable
 # add_executable(robominton_node src/robominton_node.cpp)
  add_executable(disp src/disp.cpp)
+ add_executable(manual src/manual.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -118,6 +120,10 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
  target_link_libraries(disp
+   ${catkin_LIBRARIES}
+ )
+
+ target_link_libraries(manual
    ${catkin_LIBRARIES}
  )
 

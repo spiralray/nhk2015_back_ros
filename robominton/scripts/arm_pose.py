@@ -109,6 +109,21 @@ def poseCallback(msg):
     #print msg
     pose = msg.pose
     
+def modeCallback(msg):
+    global mode
+    #print msg
+    mode = msg.data
+
+def enc1Callback(msg):
+    global slide
+    #print msg
+    slide = msg.data
+    
+def enc2Callback(msg):
+    global roll
+    #print msg
+    roll = msg.data
+    
 def shuttleCallback(msg):
     #print msg
     
@@ -119,7 +134,17 @@ def shuttleCallback(msg):
 def time_callback(event):
     s.predict(0.01)
     s.predict(0.01)
-    predictOrbit(copy.copy(s.mu))
+    if mode == 0:
+        servearm_pub.publish( std_msgs.msg.Float32(0.01) )
+        predictOrbit(copy.copy(s.mu))
+        
+    elif mode == 1:
+        roll_target = -math.pi*2/3
+        slide_target = 0.05
+        roll_pub.publish( std_msgs.msg.Float32(roll_target) )
+        slide_pub.publish( std_msgs.msg.Float32(slide_target) )
+        if abs( roll_target - roll ) < math.pi/180 and abs( slide_target - slide ) < 0.01:
+            servearm_pub.publish( std_msgs.msg.Float32(0.3) )
     
 if __name__ == '__main__':
 
@@ -132,7 +157,18 @@ if __name__ == '__main__':
     slide_pub = rospy.Publisher('/mb1/motor1', std_msgs.msg.Float32, queue_size=1)
     roll_pub = rospy.Publisher('/mb1/motor2', std_msgs.msg.Float32, queue_size=1)
     
+    servearm_pub = rospy.Publisher('/mb2/motor', std_msgs.msg.Float32, queue_size=1)
+    
     rospy.Subscriber("/robot/pose", PoseStamped, poseCallback)
+    
+    mode = 0
+    rospy.Subscriber("/robot/mode", PoseStamped, modeCallback)
+    
+    slide = 0
+    rospy.Subscriber("/mb1/enc1", std_msgs.msg.Float32, enc1Callback)
+    roll = 0
+    rospy.Subscriber("/mb1/enc2", std_msgs.msg.Float32, enc2Callback)
+    
     rospy.Subscriber("/shuttle/status", shuttle_msg, shuttleCallback)
     
     rospy.Timer(rospy.Duration(0.02), time_callback)
