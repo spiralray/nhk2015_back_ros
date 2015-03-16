@@ -42,6 +42,10 @@ def callback(msg):
         data =  struct.unpack('f', msg.data )[0]
         mb1enc3.publish( std_msgs.msg.Float32(data) )
     
+    elif  msg.stdId == 0x240:
+        data =  struct.unpack('f', msg.data )[0]
+        mb2enc.publish( std_msgs.msg.Float32(data) )
+    
     #Encoders for dead reckoning
     elif msg.stdId == 0x330:
         data =  struct.unpack('ii', msg.data )
@@ -95,6 +99,14 @@ def mb1swing(msg):
     send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
+def mb2motor(msg):
+    send = CAN()
+    send.stdId = 0x140
+    send.extId = -1
+    send.data = struct.pack('f', msg.data)
+    pub.publish( send )
+    
+    
      
 def listener():
     rospy.Subscriber("canrx", CAN, callback)
@@ -105,6 +117,8 @@ def listener():
     rospy.Subscriber("/mb1/motor1", std_msgs.msg.Float32, mb1motor1)
     rospy.Subscriber("/mb1/motor2", std_msgs.msg.Float32, mb1motor2)
     rospy.Subscriber("/mb1/swing", std_msgs.msg.Float32, mb1swing)
+    
+    rospy.Subscriber("/mb2/motor", std_msgs.msg.Float32, mb2motor)
     
     rospy.spin()
             
@@ -121,6 +135,8 @@ if __name__ == '__main__':
     mb1enc1 = rospy.Publisher('/mb1/enc1', std_msgs.msg.Float32, queue_size=1)
     mb1enc2 = rospy.Publisher('/mb1/enc2', std_msgs.msg.Float32, queue_size=1)
     mb1enc3 = rospy.Publisher('/mb1/enc3', std_msgs.msg.Float32, queue_size=1)
+    
+    mb2enc = rospy.Publisher('/mb2/enc', std_msgs.msg.Float32, queue_size=1)
     
     encX = rospy.Publisher('/encX', std_msgs.msg.Int32, queue_size=1)
     encY = rospy.Publisher('/encY', std_msgs.msg.Int32, queue_size=1)
