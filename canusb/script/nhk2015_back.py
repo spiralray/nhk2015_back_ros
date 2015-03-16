@@ -106,7 +106,15 @@ def mb2motor(msg):
     send.data = struct.pack('f', msg.data)
     pub.publish( send )
     
-    
+def handCallback(msg):
+    send = CAN()
+    send.stdId = 0x150
+    send.extId = -1
+    if msg.data:
+        send.data = [0xff]
+    else:
+        send.data = [0x00]
+    pub.publish( send )
      
 def listener():
     rospy.Subscriber("canrx", CAN, callback)
@@ -119,6 +127,8 @@ def listener():
     rospy.Subscriber("/mb1/swing", std_msgs.msg.Float32, mb1swing)
     
     rospy.Subscriber("/mb2/motor", std_msgs.msg.Float32, mb2motor)
+    
+    rospy.Subscriber("/hand", std_msgs.msg.Byte, handCallback)
     
     rospy.spin()
             

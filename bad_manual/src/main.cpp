@@ -40,7 +40,7 @@ private:
 Machine::Machine()
 {
 	swing_pub = mh.advertise<std_msgs::Float32>("mb1/swing", 1);
-	air_pub = mh.advertise<std_msgs::Byte>("mb1/air", 1);
+	air_pub = mh.advertise<std_msgs::Byte>("/hand", 1);
 
 	joy_sub = mh.subscribe<sensor_msgs::Joy>("joy", 10, &Machine::joyCallback, this);
 
