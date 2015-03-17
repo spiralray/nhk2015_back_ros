@@ -1,7 +1,7 @@
 <launch>
   
   <include file="$(find canusb)/launch/canusb.launch"/>
-  <node name="canusb" pkg="canusb" type="nhk2015_back.py" />
+  <node name="canusb_nhk2015" pkg="canusb" type="nhk2015_back.py" />
   
   <node name="hokuyo_node" pkg="hokuyo_node" type="hokuyo_node" />
   <include file="$(find laser2location)/launch/laser.launch"/>

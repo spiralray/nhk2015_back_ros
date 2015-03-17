@@ -86,7 +86,7 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		air.data = 1;
 		air_pub.publish(air);
 
-		ros::Duration(0.3).sleep();
+		ros::Duration(0.18).sleep();
 
 		std_msgs::Float32 swing;
 		swing.data = 1.0f;
