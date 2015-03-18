@@ -12,6 +12,7 @@
 #include <visualization_msgs/Marker.h>	//for displaying points of a shuttle
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
+#include <std_msgs/Float32.h>
 
 #include <pthread.h>
 #include <math.h>
@@ -113,6 +114,11 @@ void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
 }
 
+void servoCallback(const std_msgs::Float32::ConstPtr& msg){
+	//ROS_INFO("poseCallback");
+	kinect.setKinectRad(msg->data);
+}
+
 
 void transformToGlobalFrame( geometry_msgs::Point* output, const geometry_msgs::Point* shuttle, const geometry_msgs::Pose* robot){
 	float yaw = -atan2(2.0*(robot->orientation.x*robot->orientation.y + robot->orientation.w*robot->orientation.z), robot->orientation.w*robot->orientation.w + robot->orientation.x*robot->orientation.x - robot->orientation.y*robot->orientation.y - robot->orientation.z*robot->orientation.z);
@@ -167,6 +173,7 @@ int main(int argc, char **argv)
   image_transport::Subscriber sub = it.subscribe("/kinect/depth", 1, imageCallback);
 
   ros::Subscriber subPose = nh.subscribe("/robot/pose", 10, poseCallback);
+  ros::Subscriber subAngle = nh.subscribe("/kinect/angle", 10, servoCallback);
 
   pthread_t thread;
   pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );
