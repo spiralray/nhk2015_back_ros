@@ -7,6 +7,9 @@
   <include file="$(find laser2location)/launch/laser.launch"/>
   <node name="deadreckoning" pkg="deadreckoning" type="deadreckoning" />
 
+  <include file="$(find kondo)/launch/kondo.launch"/>
+  <node name="kondo_nhk" pkg="kondo" type="nhk2015.py" />
+
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   <include file="$(find shuttle_finder)/launch/shuttle_finder.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
