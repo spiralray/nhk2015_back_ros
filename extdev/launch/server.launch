@@ -1,0 +1,4 @@
+<launch>
+  <param name="/extdev/port" value="/dev/rfcomm0" />
+  <node name="extdev" pkg="extdev" type="server.py" />
+</launch>
