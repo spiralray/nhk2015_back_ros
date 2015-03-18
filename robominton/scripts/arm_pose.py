@@ -23,7 +23,7 @@ from _shuttle_msg import shuttle_msg
 
 import math
 
-racket_length = 0.560
+racket_length = 0.480
 
 def getTransformMatrixToRacketCoordinate():
     R = np.mat([
