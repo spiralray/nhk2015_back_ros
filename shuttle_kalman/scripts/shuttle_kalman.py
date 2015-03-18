@@ -31,7 +31,9 @@ def callback(msg):
     
     else:
         dt = msg.header.stamp.to_sec() - lastmsg.header.stamp.to_sec()
-        if abs(dt) > 0.3:
+        if dt < 0:
+            print "recieved data is too old!"
+        elif dt > 0.3:
             updated = 1;
             
         elif updated == 1:
@@ -70,6 +72,7 @@ if __name__ == '__main__':
     
     pub = rospy.Publisher('/shuttle/status', shuttle_msg, queue_size=1)
     rospy.Subscriber("/shuttle/point", PointStamped, callback)
+    rospy.Subscriber("/shuttle/point2", PointStamped, callback)
     rospy.spin()
     
     
