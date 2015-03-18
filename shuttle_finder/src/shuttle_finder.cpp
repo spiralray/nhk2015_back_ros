@@ -41,8 +41,11 @@ protected:
 	float kinect_rad;
 	float kinect_sin,kinect_cos;
 public:
+	double offset_x, offset_y, offset_z;
+
 	KinectV2(){
 		setKinectRad(0.0f*M_PI/180);
+		offset_x = offset_y = offset_z = 0.0f;
 	}
 
 	void setKinectRad(float rad){
@@ -69,9 +72,9 @@ public:
 		float ty = (float)((y - cy_d) * depth * fy_d);
 		float tz = (float)(depth);
 
-		result.x = tx;
-		result.z = ty*kinect_cos + tz*kinect_sin+1.415;
-		result.y = ty*kinect_sin + tz*kinect_cos-0.383;
+		result.x = tx+offset_x;
+		result.z = ty*kinect_cos + tz*kinect_sin+offset_z;
+		result.y = ty*kinect_sin + tz*kinect_cos+offset_y;
 		return result;
 	}
 };
@@ -121,6 +124,42 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "shuttleFinder");
   ros::NodeHandle nh;
+
+  ros::NodeHandle local_nh("~");
+
+  if (!local_nh.hasParam("offset_x")){
+	  kinect.offset_x = 0.0f;
+  }
+  else{
+	  if (!local_nh.getParam("offset_x", kinect.offset_x)){
+		  ROS_ERROR("parameter offset_x is invalid.");
+		  return -1;
+	  }
+  }
+
+  if (!local_nh.hasParam("offset_y")){
+	  kinect.offset_y = 0.0f;
+  }
+  else{
+	  if (!local_nh.getParam("offset_y", kinect.offset_y)){
+		  ROS_ERROR("parameter offset_y is invalid.");
+		  return -1;
+	  }
+  }
+
+  if (!local_nh.hasParam("offset_z")){
+	  kinect.offset_z = 0.0f;
+  }
+  else{
+	  if (!local_nh.getParam("offset_z", kinect.offset_z)){
+		  ROS_ERROR("parameter offset_z is invalid.");
+		  return -1;
+	  }
+  }
+
+  ROS_INFO("offset_x=%.3f, offset_y=%.3f, offset_z=%.3f",kinect.offset_x, kinect.offset_y, kinect.offset_z);
+
+
 
   cv::startWindowThread();
 
