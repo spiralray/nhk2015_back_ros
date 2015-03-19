@@ -37,15 +37,22 @@
 
 #include <pcl/visualization/cloud_viewer.h>
 
+#include <pcl/common/transforms.h>
+
+#include "pcl_kinect2.h"
 
 
-#ifndef M_PI
-#define M_PI	3.14159265358979
-#endif
+class PCSize
+{
+public:
+    double length;///x方向
+    double width;///y方向
+    double height;///z方向
+};
 
-#define MARGIN_AROUND	30
 
 using namespace cv;
+
 
 pthread_mutex_t	mutex;  // MUTEX
 Mat depth_frame;
@@ -58,62 +65,10 @@ geometry_msgs::Pose _pose;
 
 float kinect_pitch=0.0f;
 
-cv::Mat lookupX, lookupY;
-
-class PCSize
-{
-public:
-    double length;///x方向
-    double width;///y方向
-    double height;///z方向
-};
-
-class KinectV2{
-protected:
-	float kinect_rad;
-	float kinect_sin,kinect_cos;
-public:
-	double offset_x, offset_y, offset_z;
-
-	KinectV2(){
-		setKinectRad(0.0f*M_PI/180);
-		offset_x = offset_y = offset_z = 0.0f;
-	}
-
-	void setKinectRad(float rad){
-		kinect_rad = rad;
-		kinect_sin = sin(rad);
-		kinect_cos = cos(rad);
-	}
-
-	float RawDepthToMeters(int depthValue)
-	{
-		return (double)depthValue / 1000;
-	}
-	geometry_msgs::Point DepthToWorld(int x, int y, int depthValue)
-	{
-		float fx_d = 0.0027697133333333;
-		float fy_d = -0.00271;
-		float cx_d = 256;
-		float cy_d = 214;
-
-		geometry_msgs::Point result;
-		float depth = RawDepthToMeters(depthValue);
-
-		float tx = -(float)((x - cx_d) * depth * fx_d);
-		float ty = (float)((y - cy_d) * depth * fy_d);
-		float tz = (float)(depth);
-
-		result.x = tx+offset_x;
-		result.z = ty*kinect_cos + tz*kinect_sin+offset_z;
-		result.y = ty*kinect_sin + tz*kinect_cos+offset_y;
-		return result;
-	}
-};
-
 KinectV2 kinect;
 
 void thread_main();
+
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -145,58 +100,6 @@ void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 void servoCallback(const std_msgs::Float32::ConstPtr& msg){
 	//ROS_INFO("poseCallback");
 	kinect.setKinectRad(msg->data);
-}
-
-void createLookup(size_t width, size_t height)
-{
-	const float fx = 0.0027697133333333;
-	const float fy = -0.00271;
-	const float cx = 256;
-	const float cy = 214;
-	float *it;
-
-	lookupY = cv::Mat(1, height, CV_32F);
-	it = lookupY.ptr<float>();
-	for(size_t r = 0; r < height; ++r, ++it)
-	{
-		*it = (r - cy) * fy;
-	}
-
-	lookupX = cv::Mat(1, width, CV_32F);
-	it = lookupX.ptr<float>();
-	for(size_t c = 0; c < width; ++c, ++it)
-	{
-		*it = (c - cx) * fx;
-	}
-}
-
-void createCloud(const cv::Mat &depth, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud)
-{
-	const float badPoint = std::numeric_limits<float>::quiet_NaN();
-
-	#pragma omp parallel for
-	for(int r = 0; r < depth.rows; ++r)
-	{
-		pcl::PointXYZ *itP = &cloud->points[r * depth.cols];
-		const uint16_t *itD = depth.ptr<uint16_t>(r);
-		const float y = lookupY.at<float>(0, r);
-		const float *itX = lookupX.ptr<float>();
-
-		for(size_t c = 0; c < (size_t)depth.cols; ++c, ++itP, ++itD, ++itX)
-		{
-			register const float depthValue = *itD / 1000.0f;
-			// Check for invalid measurements
-			if(isnan(depthValue) || depthValue <= 0.001)
-			{
-				// not valid
-				itP->x = itP->y = itP->z = badPoint;
-				continue;
-			}
-			itP->z = depthValue;
-			itP->x = *itX * depthValue;
-			itP->y = y * depthValue;
-		}
-	}
 }
 
 PCSize max_min(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)//点群の各XYZ方向の最大値と最小値を求める
@@ -346,17 +249,12 @@ void thread_main(){
 
 	ros::Time timestamp = ros::Time::now();
 
-	geometry_msgs::Pose robot_pose;
-
-	createLookup(512,424);
-
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
 	cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>());
 	cloud->height = 424;
 	cloud->width = 512;
 	cloud->is_dense = false;
 	cloud->points.resize(512 * 424);
-	createLookup(512, 424);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -403,7 +301,7 @@ void thread_main(){
 
 		pthread_mutex_lock( &pose_mutex );
 		pthread_mutex_lock( &mutex );
-		robot_pose = _pose;
+		kinect.robot = _pose;
 		pthread_mutex_unlock( &pose_mutex );
 
 		if( timestamp == depth_timestamp){
@@ -424,7 +322,7 @@ void thread_main(){
 		shuttle.header.stamp = timestamp;
 		shuttle.header.frame_id = "laser";
 
-		createCloud(depth, cloud);
+		kinect.createCloud(depth, cloud);
 
 		// Down sampling
 		pcl::VoxelGrid<pcl::PointXYZ> sorVoxel;
@@ -447,7 +345,13 @@ void thread_main(){
 		sor.setStddevMulThresh (0.04);
 		sor.filter (*cloud_filtered);
 
-		visualizer->updatePointCloud(cloud_filtered, cloudName);
+		Eigen::Affine3f matrix;
+		kinect.getTransformMatrixToGlobalFrame(matrix);
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::transformPointCloud( *cloud_filtered, *cloud_global, matrix );
+
+		visualizer->updatePointCloud(cloud_global, cloudName);
 		visualizer->spinOnce(1);
 
 		//Clustering(cloud);
