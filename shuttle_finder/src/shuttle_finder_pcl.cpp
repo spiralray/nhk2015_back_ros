@@ -45,9 +45,9 @@
 class PCSize
 {
 public:
-    double length;///x方向
-    double width;///y方向
-    double height;///z方向
+    float length;///x方向
+    float width;///y方向
+    float height;///z方向
 };
 
 
@@ -130,40 +130,12 @@ PCSize max_min(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)//点群の各XYZ方向
             min_z = cloud->points[i].z;
     }
 
-    size.length = abs(max_x) + abs(min_x);
-    size.width = abs(max_y) + abs(min_y);
-    size.height = abs(max_z) + abs(min_y);
+    size.length = abs(max_x - min_x);
+    size.width = abs(max_y - min_y);
+    size.height = abs(max_z - min_y);
     return size;
 }
 
-void Clustering(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
-{
-    PCSize size;
-    size = max_min(cloud);
-    double min = size.height;
-    if(min > size.width)
-        min = size.width;
-    if(min > size.length)
-        min = size.length;
-    if(min > size.height)
-        min = size.height;
-
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud (cloud);
-
-    std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance (min / 10);
-    ec.setMinClusterSize (10);//最小のクラスターの値を設定
-    ec.setMaxClusterSize (25000);//最大のクラスターの値を設定
-    ec.setSearchMethod (tree);//検索に使用する手法を指定
-    ec.setInputCloud (cloud);//点群を入力
-    ec.extract (cluster_indices);//クラスター情報を出力
-
-    std::string name;
-    name = "cluster";
-
-}
 
 int main(int argc, char **argv)
 {
@@ -342,26 +314,29 @@ void thread_main(){
 		visualizer->updatePointCloud(cloud_global, cloudName);
 #else
 
+
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("x");
 		pass.setFilterLimits (-3, 3);
 		pass.filter (*cloud_global);
-
+#if 0
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
 		pass.setFilterLimits (1.7, 10);
 		pass.filter (*cloud_global);
+#else
 
+#endif
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
 		tree->setInputCloud (cloud_global);
 
 		std::vector<pcl::PointIndices> cluster_indices;
 		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
 
-		ec.setClusterTolerance (0.2);
+		ec.setClusterTolerance (0.4);
 
 		ec.setMinClusterSize (10);//最小のクラスターの値を設定
-		ec.setMaxClusterSize (25000);//最大のクラスターの値を設定
+		ec.setMaxClusterSize (250);//最大のクラスターの値を設定
 		ec.setSearchMethod (tree);//検索に使用する手法を指定
 		ec.setInputCloud (cloud_global);//点群を入力
 		ec.extract (cluster_indices);//クラスター情報を出力
@@ -370,14 +345,41 @@ void thread_main(){
 		float colors[6][3] ={{255, 0, 0}, {0,255,0}, {0,0,255}, {255,255,0}, {0,255,255}, {255,0,255}};
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZRGB>);
 		pcl::copyPointCloud(*cloud_global, *cloud_cluster);
+
+
+		int count;
+		double gx,gy,gz;
+
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
 		{
+
+			count = 0;
+			gx = gy = gz = 0.0;
+
 			for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++) {
+
+				//ROS_ERROR( "%.3f %.3f %.3f", cloud_global->points[*pit].x, cloud_global->points[*pit].y, cloud_global->points[*pit].z );
+				gx += cloud_global->points[*pit].x;
+				gy += cloud_global->points[*pit].y;
+				gz += cloud_global->points[*pit].z;
+				count++;
+
 				cloud_cluster->points[*pit].r = colors[j%6][0];
 				cloud_cluster->points[*pit].g = colors[j%6][1];
 				cloud_cluster->points[*pit].b = colors[j%6][2];
 			}
-			std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+
+			gx = gx/count;
+			gy = gy/count;
+			gz = gz/count;
+
+			shuttle.point.x = gx;
+			shuttle.point.y = gy;
+			shuttle.point.z = gz;
+
+			shuttle_pub.publish(shuttle);
+			//ROS_ERROR( "%.3lf %.3lf %.3lf", gx, gy, gz );
+
 			j++;
 		}
 
