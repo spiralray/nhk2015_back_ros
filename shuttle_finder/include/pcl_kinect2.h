@@ -79,9 +79,9 @@ public:
 					itP->x = itP->y = itP->z = badPoint;
 					continue;
 				}
-				itP->z = depthValue;
 				itP->x = *itX * depthValue;
-				itP->y = y * depthValue;
+				itP->y = depthValue;
+				itP->z = y * depthValue;
 			}
 		}
 	}
@@ -90,6 +90,7 @@ public:
 
 		Eigen::Matrix4f r,t,y,p;
 
+		setKinectRad(30.0f*M_PI/180);
 		const float cos_theta = cos( kinect_rad );
 		const float sin_theta = sin( kinect_rad );
 		r << \
@@ -105,8 +106,8 @@ public:
 				0, 0, 0, 1;
 
 		const float yaw = -atan2(2.0*(robot.orientation.x*robot.orientation.y + robot.orientation.w*robot.orientation.z), robot.orientation.w*robot.orientation.w + robot.orientation.x*robot.orientation.x - robot.orientation.y*robot.orientation.y - robot.orientation.z*robot.orientation.z);
-		const float cos_yaw = cos( yaw );
-		const float sin_yaw = sin( yaw );
+		const float cos_yaw = cos( -yaw );
+		const float sin_yaw = sin( -yaw );
 
 		y << \
 				cos_yaw, 	-sin_yaw, 	0, 0, \
@@ -123,7 +124,7 @@ public:
 
 		//ROS_ERROR("%.3f %.3f %.3f", robot.position.x, robot.position.y, robot.position.z);
 
-		matrix = p * y * t * r;
+		matrix = p*y*t*r;
 
 	}
 };

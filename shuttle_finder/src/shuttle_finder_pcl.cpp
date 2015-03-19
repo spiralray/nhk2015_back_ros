@@ -163,23 +163,6 @@ void Clustering(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     std::string name;
     name = "cluster";
 
-    int j = 0;
-    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)//クラスターを1塊ごと出力
-    {
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-            cloud_cluster->points.push_back (cloud->points[*pit]); //*
-
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
-
-        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-        std::stringstream ss;
-        ss << name << "_p_" << j << ".pcd";//クラスター毎に名前を変化
-        pcl::io::savePCDFileBinary(ss.str(), *cloud_cluster);
-        j++;
-    }
 }
 
 int main(int argc, char **argv)
@@ -262,6 +245,7 @@ void thread_main(){
 	pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
 	visualizer->addPointCloud(cloud, cloudName);
 	visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, cloudName);
+	visualizer->addCoordinateSystem (1.0);
 	visualizer->initCameraParameters();
 	visualizer->setBackgroundColor(0, 0, 0);
 	visualizer->setPosition(0, 0);
@@ -329,11 +313,11 @@ void thread_main(){
 		sorVoxel.setInputCloud (cloud);
 		sorVoxel.setLeafSize (0.01f, 0.01f, 0.01f);
 		sorVoxel.filter (*cloud_filtered);
-
+#if 1
 		// Remove too near points
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud (cloud_filtered);
-		pass.setFilterFieldName ("z");
+		pass.setFilterFieldName ("y");
 		pass.setFilterLimits (1.0, 10.0);
 		//pass.setFilterLimitsNegative (true);
 		pass.filter (*cloud_filtered);
@@ -344,17 +328,50 @@ void thread_main(){
 		sor.setMeanK (50);
 		sor.setStddevMulThresh (0.04);
 		sor.filter (*cloud_filtered);
-
+#endif
 		Eigen::Affine3f matrix;
 		kinect.getTransformMatrixToGlobalFrame(matrix);
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::transformPointCloud( *cloud_filtered, *cloud_global, matrix );
 
+#if 0
 		visualizer->updatePointCloud(cloud_global, cloudName);
+#else
+
+		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+		tree->setInputCloud (cloud_global);
+
+		std::vector<pcl::PointIndices> cluster_indices;
+		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+
+		ec.setClusterTolerance (0.1);
+
+		ec.setMinClusterSize (10);//最小のクラスターの値を設定
+		ec.setMaxClusterSize (25000);//最大のクラスターの値を設定
+		ec.setSearchMethod (tree);//検索に使用する手法を指定
+		ec.setInputCloud (cloud_global);//点群を入力
+		ec.extract (cluster_indices);//クラスター情報を出力
+
+		int j = 0;
+		float colors[6][3] ={{255, 0, 0}, {0,255,0}, {0,0,255}, {255,255,0}, {0,255,255}, {255,0,255}};
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZRGB>);
+		pcl::copyPointCloud(*cloud_global, *cloud_cluster);
+		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+		{
+			for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++) {
+				cloud_cluster->points[*pit].r = colors[j%6][0];
+				cloud_cluster->points[*pit].g = colors[j%6][1];
+				cloud_cluster->points[*pit].b = colors[j%6][2];
+			}
+			std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+			j++;
+		}
+
+		visualizer->updatePointCloud(cloud_cluster, cloudName);
+#endif
 		visualizer->spinOnce(1);
 
-		//Clustering(cloud);
 
 	}
 	visualizer->close();
