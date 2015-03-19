@@ -319,7 +319,7 @@ void thread_main(){
 		pass.setFilterFieldName ("x");
 		pass.setFilterLimits (-3, 3);
 		pass.filter (*cloud_global);
-#if 0
+#if 1
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
 		pass.setFilterLimits (1.7, 10);
