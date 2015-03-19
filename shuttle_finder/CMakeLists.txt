@@ -20,6 +20,12 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
 )
+find_package(OpenMP)
+find_package(PCL REQUIRED)
+
+if(OPENMP_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -106,6 +112,8 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIR}
+  ${PCL_INCLUDE_DIRS}
   include
 )
 
@@ -116,6 +124,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(shuttle_finder src/shuttle_finder.cpp)
+add_executable(shuttle_finder_pcl src/shuttle_finder_pcl.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -124,7 +133,14 @@ add_executable(shuttle_finder src/shuttle_finder.cpp)
 ## Specify libraries to link a library or executable target against
  target_link_libraries(shuttle_finder
    ${catkin_LIBRARIES}
+   ${OpenCV_INCLUDE_DIR}
    cvblob
+ )
+ 
+ target_link_libraries(shuttle_finder_pcl
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBRARIES}
+   ${PCL_LIBRARIES}
  )
 
 #############
