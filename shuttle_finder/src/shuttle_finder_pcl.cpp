@@ -313,22 +313,25 @@ void thread_main(){
 		sorVoxel.setInputCloud (cloud);
 		sorVoxel.setLeafSize (0.01f, 0.01f, 0.01f);
 		sorVoxel.filter (*cloud_filtered);
-#if 1
-		// Remove too near points
-		pcl::PassThrough<pcl::PointXYZ> pass;
-		pass.setInputCloud (cloud_filtered);
-		pass.setFilterFieldName ("y");
-		pass.setFilterLimits (1.0, 10.0);
-		//pass.setFilterLimitsNegative (true);
-		pass.filter (*cloud_filtered);
 
 		//Remove noise
 		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
 		sor.setInputCloud (cloud_filtered);
 		sor.setMeanK (50);
-		sor.setStddevMulThresh (0.04);
+		sor.setStddevMulThresh (0.03);
 		sor.filter (*cloud_filtered);
-#endif
+
+		// Remove too near points
+		pcl::PassThrough<pcl::PointXYZ> pass;
+		pass.setInputCloud (cloud_filtered);
+		pass.setFilterFieldName ("y");
+		pass.setFilterLimits (1.5, 10.0);
+		//pass.setFilterLimitsNegative (true);
+		pass.filter (*cloud_filtered);
+
+#if 0
+		visualizer->updatePointCloud(cloud_filtered, cloudName);
+#else
 		Eigen::Affine3f matrix;
 		kinect.getTransformMatrixToGlobalFrame(matrix);
 
@@ -339,13 +342,23 @@ void thread_main(){
 		visualizer->updatePointCloud(cloud_global, cloudName);
 #else
 
+		pass.setInputCloud (cloud_global);
+		pass.setFilterFieldName ("x");
+		pass.setFilterLimits (-3, 3);
+		pass.filter (*cloud_global);
+
+		pass.setInputCloud (cloud_global);
+		pass.setFilterFieldName ("z");
+		pass.setFilterLimits (1.7, 10);
+		pass.filter (*cloud_global);
+
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
 		tree->setInputCloud (cloud_global);
 
 		std::vector<pcl::PointIndices> cluster_indices;
 		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
 
-		ec.setClusterTolerance (0.1);
+		ec.setClusterTolerance (0.2);
 
 		ec.setMinClusterSize (10);//最小のクラスターの値を設定
 		ec.setMaxClusterSize (25000);//最大のクラスターの値を設定
@@ -369,6 +382,7 @@ void thread_main(){
 		}
 
 		visualizer->updatePointCloud(cloud_cluster, cloudName);
+#endif
 #endif
 		visualizer->spinOnce(1);
 

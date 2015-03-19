@@ -90,7 +90,6 @@ public:
 
 		Eigen::Matrix4f r,t,y,p;
 
-		setKinectRad(30.0f*M_PI/180);
 		const float cos_theta = cos( kinect_rad );
 		const float sin_theta = sin( kinect_rad );
 		r << \
