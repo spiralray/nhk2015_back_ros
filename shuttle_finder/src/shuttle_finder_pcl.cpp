@@ -19,15 +19,23 @@
 #include <pcl/ModelCoefficients.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
+
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+
 #include <pcl/features/normal_3d.h>
+
 #include <pcl/kdtree/kdtree.h>
+
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
+
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+
 #include <pcl/visualization/cloud_viewer.h>
+
 
 
 #ifndef M_PI
@@ -354,6 +362,8 @@ void thread_main(){
 	cloud->points.resize(512 * 424);
 	createLookup(512, 424);
 
+	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGBA>);
+
 	const std::string cloudName = "rendered";
 	pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
 	visualizer->addPointCloud(cloud, cloudName);
@@ -418,6 +428,13 @@ void thread_main(){
 		shuttle.header.frame_id = "laser";
 
 		createCloud(depth, cloud);
+
+		// Create the filtering object
+		pcl::VoxelGrid<pcl::PointXYZRGBA> sor;
+		sor.setInputCloud (cloud);
+		sor.setLeafSize (0.01f, 0.01f, 0.01f);
+		sor.filter (*cloud_filtered);
+
 		visualizer->updatePointCloud(cloud, cloudName);
 		visualizer->spinOnce(10);
 
