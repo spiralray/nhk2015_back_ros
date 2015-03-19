@@ -22,6 +22,7 @@
 
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
 #include <pcl/features/normal_3d.h>
@@ -169,14 +170,14 @@ void createLookup(size_t width, size_t height)
 	}
 }
 
-void createCloud(const cv::Mat &depth, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud)
+void createCloud(const cv::Mat &depth, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud)
 {
 	const float badPoint = std::numeric_limits<float>::quiet_NaN();
 
 	#pragma omp parallel for
 	for(int r = 0; r < depth.rows; ++r)
 	{
-		pcl::PointXYZRGBA *itP = &cloud->points[r * depth.cols];
+		pcl::PointXYZ *itP = &cloud->points[r * depth.cols];
 		const uint16_t *itD = depth.ptr<uint16_t>(r);
 		const float y = lookupY.at<float>(0, r);
 		const float *itX = lookupX.ptr<float>();
@@ -189,16 +190,11 @@ void createCloud(const cv::Mat &depth, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &
 			{
 				// not valid
 				itP->x = itP->y = itP->z = badPoint;
-				itP->rgba = 0;
 				continue;
 			}
 			itP->z = depthValue;
 			itP->x = *itX * depthValue;
 			itP->y = y * depthValue;
-			itP->b = 0xff;
-			itP->g = 0xff;
-			itP->r = 0xff;
-			itP->a = 0;
 		}
 	}
 }
@@ -354,15 +350,15 @@ void thread_main(){
 
 	createLookup(512,424);
 
-	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
-	cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>());
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+	cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>());
 	cloud->height = 424;
 	cloud->width = 512;
 	cloud->is_dense = false;
 	cloud->points.resize(512 * 424);
 	createLookup(512, 424);
 
-	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGBA>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
 	const std::string cloudName = "rendered";
 	pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
@@ -397,7 +393,8 @@ void thread_main(){
 
 		//wait for recieve new frame
 		while(recieved == false){
-			ros::Duration(0.001).sleep();
+			//ros::Duration(0.001).sleep();
+			visualizer->spinOnce(1);
 		}
 
 		cv::Mat depth;
@@ -429,14 +426,29 @@ void thread_main(){
 
 		createCloud(depth, cloud);
 
-		// Create the filtering object
-		pcl::VoxelGrid<pcl::PointXYZRGBA> sor;
-		sor.setInputCloud (cloud);
-		sor.setLeafSize (0.01f, 0.01f, 0.01f);
+		// Down sampling
+		pcl::VoxelGrid<pcl::PointXYZ> sorVoxel;
+		sorVoxel.setInputCloud (cloud);
+		sorVoxel.setLeafSize (0.01f, 0.01f, 0.01f);
+		sorVoxel.filter (*cloud_filtered);
+
+		// Remove too near points
+		pcl::PassThrough<pcl::PointXYZ> pass;
+		pass.setInputCloud (cloud_filtered);
+		pass.setFilterFieldName ("z");
+		pass.setFilterLimits (1.0, 10.0);
+		//pass.setFilterLimitsNegative (true);
+		pass.filter (*cloud_filtered);
+
+		//Remove noise
+		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+		sor.setInputCloud (cloud_filtered);
+		sor.setMeanK (50);
+		sor.setStddevMulThresh (0.04);
 		sor.filter (*cloud_filtered);
 
-		visualizer->updatePointCloud(cloud, cloudName);
-		visualizer->spinOnce(10);
+		visualizer->updatePointCloud(cloud_filtered, cloudName);
+		visualizer->spinOnce(1);
 
 		//Clustering(cloud);
 
