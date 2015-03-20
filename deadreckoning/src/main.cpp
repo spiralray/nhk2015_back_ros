@@ -13,7 +13,7 @@
 
 #define DISTANCE_LRF_TO_CENTER 0.455	//[m]
 
-#define YAW_RATIO		0.030
+#define YAW_RATIO		0.010
 #define LOCATION_RATIO	0.025
 
 ros::Publisher pub;
@@ -65,6 +65,7 @@ void encYCallback(const std_msgs::Int32::ConstPtr& msg)
 void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 {
 	static bool isFirst = true;
+	static float lastyaw = 0.0f;
 
 	if(!laserReady) return;
 
@@ -72,7 +73,7 @@ void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 	if(!isFirst){
 		//float roll = atan2(2.0*(msg->orientation.y*msg->orientation.z + msg->orientation.w*msg->orientation.x), msg->orientation.w*msg->orientation.w - msg->orientation.x*msg->orientation.x - msg->orientation.y*msg->orientation.y + msg->orientation.z*msg->orientation.z);
 		//float pitch = asin(-2.0*(msg->orientation.x*msg->orientation.z - msg->orientation.w*msg->orientation.y));
-		yaw = msg->data;
+		yaw += msg->data - lastyaw;
 
 		float cr2 = cos(0*0.5);
 		float cp2 = cos(0*0.5);
@@ -94,29 +95,28 @@ void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 		isFirst = false;
 		yawfirst = msg->data;
 	}
+	lastyaw = msg->data;
 }
 
 void laserCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 	//ROS_INFO("IMU: [%f][%f][%f][%f]", msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z );
 	if(laserReady){
-		float tmpyaw = -atan2(2.0*(msg->pose.orientation.x*msg->pose.orientation.y + msg->pose.orientation.w*msg->pose.orientation.z), msg->pose.orientation.w*msg->pose.orientation.w + msg->pose.orientation.x*msg->pose.orientation.x - msg->pose.orientation.y*msg->pose.orientation.y - msg->pose.orientation.z*msg->pose.orientation.z)-yawfirst;
+		float tmpyaw = atan2(2.0*(msg->pose.orientation.x*msg->pose.orientation.y + msg->pose.orientation.w*msg->pose.orientation.z), msg->pose.orientation.w*msg->pose.orientation.w + msg->pose.orientation.x*msg->pose.orientation.x - msg->pose.orientation.y*msg->pose.orientation.y - msg->pose.orientation.z*msg->pose.orientation.z);
 		float tmpx = msg->pose.position.x;
 		float tmpy = msg->pose.position.y;
 
-		while(  yaw-tmpyaw > M_PI )		tmpyaw += M_PI;
-		while(  yaw-tmpyaw < -M_PI )	tmpyaw -= M_PI;
 
-		yaw = yaw*(1.0f-YAW_RATIO) + 0.01 * tmpyaw;
+		yaw = yaw*(1.0f-YAW_RATIO) + YAW_RATIO * tmpyaw;
 		pose_msg.pose.position.x = pose_msg.pose.position.x*(1.0f-LOCATION_RATIO)+tmpx*LOCATION_RATIO;
 		pose_msg.pose.position.y = pose_msg.pose.position.y*(1.0f-LOCATION_RATIO)+tmpy*LOCATION_RATIO;
 
 
 		pub.publish(pose_msg);
-		//ROS_INFO("[%f][%f][%f]", yaw*180/M_PI, msg->pose.position.x, msg->pose.position.y);
+		//ROS_ERROR("[%f][%f][%f]", tmpyaw, msg->pose.position.x, msg->pose.position.y);
 	}
 	//ROS_INFO("yaw pitch roll: [%f][%f][%f]", yaw,pitch,roll);
 	else{
-		yaw = -atan2(2.0*(msg->pose.orientation.x*msg->pose.orientation.y + msg->pose.orientation.w*msg->pose.orientation.z), msg->pose.orientation.w*msg->pose.orientation.w + msg->pose.orientation.x*msg->pose.orientation.x - msg->pose.orientation.y*msg->pose.orientation.y - msg->pose.orientation.z*msg->pose.orientation.z)-yawfirst;
+		yaw = atan2(2.0*(msg->pose.orientation.x*msg->pose.orientation.y + msg->pose.orientation.w*msg->pose.orientation.z), msg->pose.orientation.w*msg->pose.orientation.w + msg->pose.orientation.x*msg->pose.orientation.x - msg->pose.orientation.y*msg->pose.orientation.y - msg->pose.orientation.z*msg->pose.orientation.z);
 		pose_msg.pose.position.x = msg->pose.position.x;
 		pose_msg.pose.position.y = msg->pose.position.y;
 		laserReady = true;
