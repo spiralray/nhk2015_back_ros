@@ -8,9 +8,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
-#include <visualization_msgs/Marker.h>	//for displaying points of a shuttle
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float32.h>
 
 #include <pthread.h>
@@ -35,9 +35,9 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 
-#include <pcl/visualization/cloud_viewer.h>
-
 #include <pcl/common/transforms.h>
+
+#include "pcl_ros/point_cloud.h"
 
 #include "pcl_kinect2.h"
 
@@ -113,7 +113,7 @@ PCSize max_min(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)//点群の各XYZ方向
     max_y = -10000;
     max_z = -10000;
 
-    for(int i = 0; i < cloud->points.size(); i++)
+    for(unsigned int i = 0; i < cloud->points.size(); i++)
     {
         if(max_x < cloud->points[i].x)
             max_x = cloud->points[i].x;
@@ -199,8 +199,9 @@ void thread_main(){
 	pthread_detach( pthread_self( ));
 
 	ros::NodeHandle n;
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/shuttle/marker", 1);
 	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PointStamped>("/shuttle/point", 10);
+
+	ros::Publisher pcl_pub = n.advertise< sensor_msgs::PointCloud2 >("pclglobal", 1);
 
 	ros::Time timestamp = ros::Time::now();
 
@@ -214,41 +215,12 @@ void thread_main(){
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
 	const std::string cloudName = "rendered";
-	pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
-	visualizer->addPointCloud(cloud, cloudName);
-	visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, cloudName);
-	visualizer->addCoordinateSystem (1.0);
-	visualizer->initCameraParameters();
-	visualizer->setBackgroundColor(0, 0, 0);
-	visualizer->setPosition(0, 0);
-	visualizer->setSize(512, 424);
-	visualizer->setShowFPS(true);
-	visualizer->setCameraPosition(0, 0, 0, 0, -1, 0);
 
 	while(!endflag){
 
-		visualization_msgs::Marker points;
-		points.header.frame_id = "/map";
-		points.ns = "points_and_lines";
-		points.action = visualization_msgs::Marker::ADD;
-		points.pose.orientation.w = 1.0;
-		points.lifetime = ros::Duration(1000.0);
-
-		points.id = 0;
-		points.type = visualization_msgs::Marker::POINTS;
-
-		// POINTS markers use x and y scale for width/height respectively
-		points.scale.x = 0.1;
-		points.scale.y = 0.1;
-
-		// Points are green
-		points.color.r = 1.0f;
-		points.color.a = 1.0;
-
 		//wait for recieve new frame
 		while(recieved == false){
-			//ros::Duration(0.001).sleep();
-			visualizer->spinOnce(1);
+			ros::Duration(0.001).sleep();
 		}
 
 		cv::Mat depth;
@@ -271,8 +243,6 @@ void thread_main(){
 		recieved = false;
 
 		pthread_mutex_unlock( &mutex );
-
-		points.header.stamp = timestamp;
 
 		geometry_msgs::PointStamped shuttle;
 		shuttle.header.stamp = timestamp;
@@ -301,32 +271,30 @@ void thread_main(){
 		//pass.setFilterLimitsNegative (true);
 		pass.filter (*cloud_filtered);
 
-#if 0
-		visualizer->updatePointCloud(cloud_filtered, cloudName);
-#else
 		Eigen::Affine3f matrix;
 		kinect.getTransformMatrixToGlobalFrame(matrix);
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::transformPointCloud( *cloud_filtered, *cloud_global, matrix );
 
-#if 0
-		visualizer->updatePointCloud(cloud_global, cloudName);
-#else
+		sensor_msgs::PointCloud2 cloudmsg;
+		pcl::toROSMsg (*cloud_global, cloudmsg);
+		cloudmsg.header.stamp = timestamp;
+		cloudmsg.header.frame_id = "map";
+		pcl_pub.publish(cloudmsg);
+
 
 
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("x");
 		pass.setFilterLimits (-3, 3);
 		pass.filter (*cloud_global);
-#if 1
+
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
 		pass.setFilterLimits (1.7, 10);
 		pass.filter (*cloud_global);
-#else
 
-#endif
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
 		tree->setInputCloud (cloud_global);
 
@@ -347,7 +315,7 @@ void thread_main(){
 		pcl::copyPointCloud(*cloud_global, *cloud_cluster);
 
 		#pragma omp parallel for
-		for(int i = 0; i < cloud_cluster->points.size(); i++){
+		for(unsigned int i = 0; i < cloud_cluster->points.size(); i++){
 			cloud_cluster->points[i].r = 255.0f;
 			cloud_cluster->points[i].g = 255.0f;
 			cloud_cluster->points[i].b = 255.0f;
@@ -390,12 +358,6 @@ void thread_main(){
 			j++;
 		}
 
-		visualizer->updatePointCloud(cloud_cluster, cloudName);
-#endif
-#endif
-		visualizer->spinOnce(1);
-
 
 	}
-	visualizer->close();
 }
