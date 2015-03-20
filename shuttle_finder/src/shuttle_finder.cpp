@@ -272,7 +272,7 @@ void thread_main(){
 
 		geometry_msgs::PointStamped shuttle;
 		shuttle.header.stamp = timestamp;
-		shuttle.header.frame_id = "laser";
+		shuttle.header.frame_id = "map";
 
 
 		depthMat8bit.convertTo(depthMat8bit, CV_8U, 255.0 / 8000.0);

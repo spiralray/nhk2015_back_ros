@@ -276,7 +276,7 @@ void thread_main(){
 
 		geometry_msgs::PointStamped shuttle;
 		shuttle.header.stamp = timestamp;
-		shuttle.header.frame_id = "laser";
+		shuttle.header.frame_id = "map";
 
 		kinect.createCloud(depth, cloud);
 
@@ -345,6 +345,13 @@ void thread_main(){
 		float colors[6][3] ={{255, 0, 0}, {0,255,0}, {0,0,255}, {255,255,0}, {0,255,255}, {255,0,255}};
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZRGB>);
 		pcl::copyPointCloud(*cloud_global, *cloud_cluster);
+
+		#pragma omp parallel for
+		for(int i = 0; i < cloud_cluster->points.size(); i++){
+			cloud_cluster->points[i].r = 255.0f;
+			cloud_cluster->points[i].g = 255.0f;
+			cloud_cluster->points[i].b = 255.0f;
+		}
 
 
 		int count;
