@@ -116,7 +116,7 @@ public:
 
 
 		p << \
-				1, 0, 0, robot.position.x, \
+				1, 0, 0, -robot.position.x, \
 				0, 1, 0, robot.position.y, \
 				0, 0, 1, robot.position.z, \
 				0, 0, 0, 1;
