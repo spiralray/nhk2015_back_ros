@@ -20,7 +20,15 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   cv_bridge
   image_transport
+  laser_geometry
 )
+
+find_package(OpenMP)
+find_package(PCL REQUIRED)
+
+if(OPENMP_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -92,7 +100,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES laser2location
 #  CATKIN_DEPENDS OpenCV roscpp sensor_msgs
 #  DEPENDS system_lib
@@ -107,6 +115,8 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  include
 )
 
 ## Declare a cpp library
@@ -116,6 +126,8 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(laser2location src/laser2location.cpp)
+add_executable(laser_disp src/laser_disp.cpp)
+
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -124,6 +136,11 @@ add_executable(laser2location src/laser2location.cpp)
 ## Specify libraries to link a library or executable target against
  target_link_libraries(laser2location
    ${catkin_LIBRARIES}
+ )
+ 
+  target_link_libraries(laser_disp
+   ${catkin_LIBRARIES}
+   ${PCL_LIBRARIES}
  )
 
 #############

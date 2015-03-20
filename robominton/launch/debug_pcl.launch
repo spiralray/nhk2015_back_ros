@@ -1,6 +1,7 @@
 <launch>
 
   <include file="$(find laser2location)/launch/laser.launch"/>
+  <node name="laser_disp" pkg="laser2location" type="laser_disp" />
 
   <node name="canusb" pkg="canusb" type="nhk2015_back.py" />
 
