@@ -65,6 +65,8 @@ geometry_msgs::Pose _pose;
 
 float kinect_pitch=0.0f;
 
+bool debug = false;
+
 KinectV2 kinect;
 
 void thread_main();
@@ -174,6 +176,16 @@ int main(int argc, char **argv)
 	  }
   }
 
+  if (!local_nh.hasParam("debug")){
+	  debug = false;
+  }
+  else{
+	  if (!local_nh.getParam("debug", debug)){
+		  ROS_ERROR("parameter debug is invalid.");
+		  return -1;
+	  }
+  }
+
   ROS_INFO("offset_x=%.3f, offset_y=%.3f, offset_z=%.3f",kinect.offset_x, kinect.offset_y, kinect.offset_z);
 
 
@@ -201,8 +213,11 @@ void thread_main(){
 	ros::NodeHandle n;
 	ros::Publisher shuttle_pub = n.advertise<geometry_msgs::PointStamped>("/shuttle/point", 10);
 
-	ros::Publisher pcl_pub = n.advertise< sensor_msgs::PointCloud2 >("pclglobal", 1);
+	ros::Publisher pcl_pub;
 
+	if( debug ){
+		pcl_pub = n.advertise< sensor_msgs::PointCloud2 >("pclglobal", 1);
+	}
 	ros::Time timestamp = ros::Time::now();
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
@@ -213,8 +228,6 @@ void thread_main(){
 	cloud->points.resize(512 * 424);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-
-	const std::string cloudName = "rendered";
 
 	while(!endflag){
 
@@ -267,7 +280,7 @@ void thread_main(){
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud (cloud_filtered);
 		pass.setFilterFieldName ("y");
-		pass.setFilterLimits (1.5, 10.0);
+		pass.setFilterLimits (1.8, 10.0);
 		//pass.setFilterLimitsNegative (true);
 		pass.filter (*cloud_filtered);
 
@@ -277,12 +290,13 @@ void thread_main(){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::transformPointCloud( *cloud_filtered, *cloud_global, matrix );
 
-		sensor_msgs::PointCloud2 cloudmsg;
-		pcl::toROSMsg (*cloud_global, cloudmsg);
-		cloudmsg.header.stamp = timestamp;
-		cloudmsg.header.frame_id = "map";
-		pcl_pub.publish(cloudmsg);
-
+		if( debug ){
+			sensor_msgs::PointCloud2 cloudmsg;
+			pcl::toROSMsg (*cloud_global, cloudmsg);
+			cloudmsg.header.stamp = timestamp;
+			cloudmsg.header.frame_id = "map";
+			pcl_pub.publish(cloudmsg);
+		}
 
 
 		pass.setInputCloud (cloud_global);
