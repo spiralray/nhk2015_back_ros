@@ -4,6 +4,7 @@
 
   <node name="canusb" pkg="canusb" type="nhk2015_back.py" />
 
+  <param name="/shuttleFinder/debug" value="true" />
   <include file="$(find shuttle_finder)/launch/shuttle_finder_pcl.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
