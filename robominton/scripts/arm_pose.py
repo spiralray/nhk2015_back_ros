@@ -139,12 +139,12 @@ def time_callback(event):
         predictOrbit(copy.copy(s.mu))
         
     elif mode == 1:
-        roll_target = -2.24
-        slide_target = 0.055
+        roll_target = -2.452
+        slide_target = -0.036
         roll_pub.publish( std_msgs.msg.Float32(roll_target) )
         slide_pub.publish( std_msgs.msg.Float32(slide_target) )
         if abs( roll_target - roll ) < math.pi/180 and abs( slide_target - slide ) < 0.01:
-            servearm_pub.publish( std_msgs.msg.Float32(0.3) )
+            servearm_pub.publish( std_msgs.msg.Float32(0.29) )
     
 if __name__ == '__main__':
 

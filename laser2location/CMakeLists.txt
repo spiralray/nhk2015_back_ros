@@ -100,7 +100,7 @@ endif()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+#  INCLUDE_DIRS include
 #  LIBRARIES laser2location
 #  CATKIN_DEPENDS OpenCV roscpp sensor_msgs
 #  DEPENDS system_lib
@@ -116,7 +116,6 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-  include
 )
 
 ## Declare a cpp library
