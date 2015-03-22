@@ -50,8 +50,8 @@ def getTransformMatrixToRacketCoordinate():
         ])
     At =  np.mat([
           [1,0,0,0],
-          [0,math.cos(-math.pi/3),math.sin(-math.pi/3),0],
-          [0,-math.sin(-math.pi/3),math.cos(-math.pi/3),0],
+          [0,math.cos(-math.pi/4),math.sin(-math.pi/4),0],
+          [0,-math.sin(-math.pi/4),math.cos(-math.pi/4),0],
           [0,0,0,1]
         ])
     return At*A*Rt*R
