@@ -25,7 +25,7 @@ void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
 void getTransformMatrixToGlobalFrame( Eigen::Affine3f &matrix ){
 
-	Eigen::Matrix4f r,t,y,p,r_x;
+	Eigen::Matrix4f r,t,y,p;
 
 	const float cos_theta = cos( M_PI/2 );
 	const float sin_theta = sin( M_PI/2 );
@@ -43,8 +43,8 @@ void getTransformMatrixToGlobalFrame( Eigen::Affine3f &matrix ){
 			0, 0, 0, 1;
 
 	const float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
-	const float cos_yaw = cos( yaw );
-	const float sin_yaw = sin( yaw );
+	const float cos_yaw = cos( -yaw );
+	const float sin_yaw = sin( -yaw );
 
 	y << \
 			cos_yaw, 	-sin_yaw, 	0, 0, \
@@ -59,15 +59,9 @@ void getTransformMatrixToGlobalFrame( Eigen::Affine3f &matrix ){
 			0, 0, 1, pose.position.z, \
 			0, 0, 0, 1;
 
-	r_x << \
-			-1, 0, 0, 0, \
-			0, 1, 0, 0, \
-			0, 0, 1, 0, \
-			0, 0, 0, 1;
-
 	//ROS_ERROR("%.3f %.3f %.3f", pose.position.x, pose.position.y, pose.position.z);
 
-	matrix = r_x*p*y*t*r;
+	matrix = p*y*t*r;
 
 }
 

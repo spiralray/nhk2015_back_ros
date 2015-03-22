@@ -35,7 +35,7 @@ void encXCallback(const std_msgs::Int32::ConstPtr& msg)
 	//ROS_INFO("X: [%d]", msg->data);
 	if(!isFirst){
 		pose_msg.pose.position.x += (msg->data-old_x)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * cos(yaw);
-		pose_msg.pose.position.y -= (msg->data-old_x)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * sin(yaw);
+		pose_msg.pose.position.y += (msg->data-old_x)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * sin(yaw);
 	}
 	else{
 		isFirst = false;
@@ -52,7 +52,7 @@ void encYCallback(const std_msgs::Int32::ConstPtr& msg)
 	//ROS_INFO("Y: [%d]", msg->data);
 	if(!isFirst){
 		pose_msg.pose.position.x += (msg->data-old_y)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * cos(M_PI/2 + yaw);
-		pose_msg.pose.position.y -= (msg->data-old_y)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * sin(M_PI/2 + yaw);
+		pose_msg.pose.position.y += (msg->data-old_y)/(ENCODER_RESOLUTION*4)*(M_PI*OMNIWHEEL_DIAMETER) * sin(M_PI/2 + yaw);
 	}
 	else{
 		isFirst = false;
@@ -73,7 +73,7 @@ void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 	if(!isFirst){
 		//float roll = atan2(2.0*(msg->orientation.y*msg->orientation.z + msg->orientation.w*msg->orientation.x), msg->orientation.w*msg->orientation.w - msg->orientation.x*msg->orientation.x - msg->orientation.y*msg->orientation.y + msg->orientation.z*msg->orientation.z);
 		//float pitch = asin(-2.0*(msg->orientation.x*msg->orientation.z - msg->orientation.w*msg->orientation.y));
-		yaw += msg->data - lastyaw;
+		yaw -= msg->data - lastyaw;
 
 		float cr2 = cos(0*0.5);
 		float cp2 = cos(0*0.5);

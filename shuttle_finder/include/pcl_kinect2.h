@@ -90,8 +90,8 @@ public:
 
 		Eigen::Matrix4f r,t,y,p;
 
-		const float cos_theta = cos( kinect_rad );
-		const float sin_theta = sin( kinect_rad );
+		const float cos_theta = cos( -kinect_rad );
+		const float sin_theta = sin( -kinect_rad );
 		r << \
 				1,         0,           0, 0, \
 				0, cos_theta, - sin_theta, 0, \
