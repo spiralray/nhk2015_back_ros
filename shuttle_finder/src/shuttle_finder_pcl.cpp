@@ -301,12 +301,14 @@ void thread_main(){
 		kinect.createCloud(dst, cloud);
 #endif
 
+		if( cloud->points.empty() ) continue;
 		// Down sampling
 		pcl::VoxelGrid<pcl::PointXYZ> sorVoxel;
 		sorVoxel.setInputCloud (cloud);
 		sorVoxel.setLeafSize (0.01f, 0.01f, 0.01f);
 		sorVoxel.filter (*cloud_filtered);
 
+		if( cloud_filtered->points.empty() ) continue;
 		//Remove noise
 		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
 		sor.setInputCloud (cloud_filtered);
@@ -314,6 +316,7 @@ void thread_main(){
 		sor.setStddevMulThresh (0.03);
 		sor.filter (*cloud_filtered);
 
+		if( cloud_filtered->points.empty() ) continue;
 		// Remove too near points
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud (cloud_filtered);
@@ -328,6 +331,12 @@ void thread_main(){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::transformPointCloud( *cloud_filtered, *cloud_global, matrix );
 
+		if( cloud_global->points.empty() ) continue;
+		pass.setInputCloud (cloud_global);
+		pass.setFilterFieldName ("x");
+		pass.setFilterLimits (-4, 4);
+		pass.filter (*cloud_global);
+
 		if( debug ){
 			sensor_msgs::PointCloud2 cloudmsg;
 			pcl::toROSMsg (*cloud_global, cloudmsg);
@@ -336,16 +345,14 @@ void thread_main(){
 			pcl_pub.publish(cloudmsg);
 		}
 
-
-		pass.setInputCloud (cloud_global);
-		pass.setFilterFieldName ("x");
-		pass.setFilterLimits (-3, 3);
-		pass.filter (*cloud_global);
-
+		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
 		pass.setFilterLimits (1.7, 10);
 		pass.filter (*cloud_global);
+
+		if( cloud_global->points.empty() ) continue;
+		//ROS_ERROR("%d", cloud_global->points.size());
 
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
 		tree->setInputCloud (cloud_global);
