@@ -63,7 +63,7 @@ def predictOrbit(mu):
     
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
-    if t[2,0] <= -1.0:
+    if t[2,0] <= -1.5:
         roll_pub.publish( std_msgs.msg.Float32(0) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         return
@@ -107,7 +107,13 @@ def predictOrbit(mu):
                 racket_spin += 2*math.pi
                 
             roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
-            slide_pub.publish( std_msgs.msg.Float32(slide_x) )
+            
+            #rospy.logerr("%d", var)
+            
+            if var < 35:
+                slide_pub.publish( std_msgs.msg.Float32(slide_x) )
+            else:
+                slide_pub.publish( std_msgs.msg.Float32(0.0) )
                 
             return
         k.predict(0.01)
@@ -136,8 +142,9 @@ def enc2Callback(msg):
     roll = msg.data
     
 def shuttleCallback(msg):
+    global time
     #print msg
-    
+    time = msg.stamp.to_sec()
     for i in range(0, 9):
         s.mu[i,0] = msg.data[i]
     #predictOrbit(copy.copy(s.mu))
