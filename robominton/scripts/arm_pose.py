@@ -33,7 +33,7 @@ def getTransformMatrixToRacketCoordinate():
          [0,0,0,1]
         ])
     
-    yaw = math.atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
+    yaw = -math.atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
     #print yaw
     
     Rt = np.mat([
@@ -63,10 +63,12 @@ def predictOrbit(mu):
     
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
-    if t[2,0] <= 0:
+    if t[2,0] <= -1.0:
+        roll_pub.publish( std_msgs.msg.Float32(0) )
+        slide_pub.publish( std_msgs.msg.Float32(0) )
         return
     
-    for var in range(0, 300):
+    for var in range(0, 100):
         '''
         if k.mu[2] < 0:
             break
@@ -98,11 +100,20 @@ def predictOrbit(mu):
             elif slide_x < -0.24:
                 slide_x = -0.24
                 
+            while racket_spin - roll > math.pi:
+                racket_spin -= 2*math.pi
+                
+            while racket_spin - roll < -math.pi:
+                racket_spin += 2*math.pi
+                
             roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
             slide_pub.publish( std_msgs.msg.Float32(slide_x) )
                 
-            break
+            return
         k.predict(0.01)
+        
+    roll_pub.publish( std_msgs.msg.Float32(0) )
+    slide_pub.publish( std_msgs.msg.Float32(0) )
 
 def poseCallback(msg):
     global pose
