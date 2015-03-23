@@ -41,6 +41,7 @@
 
 #include "pcl_kinect2.h"
 
+//#define OPENCV_DEBUG
 
 class PCSize
 {
@@ -195,6 +196,9 @@ int main(int argc, char **argv)
   ros::Subscriber subPose = nh.subscribe("/robot/pose", 10, poseCallback);
   ros::Subscriber subAngle = nh.subscribe("/kinect/angle", 10, servoCallback);
 
+#ifdef OPENCV_DEBUG
+  cv::startWindowThread();
+#endif
   pthread_t thread;
   pthread_create( &thread, NULL, (void* (*)(void*))thread_main, NULL );
 
@@ -202,6 +206,10 @@ int main(int argc, char **argv)
 
   endflag = true;
   pthread_join( thread, NULL );
+
+#ifdef OPENCV_DEBUG
+  destroyAllWindows();
+#endif
 
   return 0;
 }
@@ -228,6 +236,10 @@ void thread_main(){
 	cloud->points.resize(512 * 424);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+
+#ifdef OPENCV_DEBUG
+  namedWindow( "frame", WINDOW_AUTOSIZE );
+#endif
 
 	while(!endflag){
 
@@ -261,7 +273,33 @@ void thread_main(){
 		shuttle.header.stamp = timestamp;
 		shuttle.header.frame_id = "map";
 
+#if 0
+		cv::erode(depth, depth, cv::Mat() );
+		cv::dilate(depth, depth, cv::Mat());
+
+#ifdef OPENCV_DEBUG
+	cv::imshow("frame", depth);
+#endif
+
 		kinect.createCloud(depth, cloud);
+#else
+		cv::Mat depthMask(depth);
+		depthMask.convertTo(depthMask, CV_8U, 255.0 / 8000.0);
+
+		cv::threshold(depthMask, depthMask, 1 , 255, cv::THRESH_BINARY);
+
+		cv::erode(depthMask, depthMask, cv::Mat() );
+		cv::dilate(depthMask, depthMask, cv::Mat());
+
+		Mat dst;
+		depth.copyTo(dst, depthMask);
+
+#ifdef OPENCV_DEBUG
+		cv::imshow("frame", dst);
+#endif
+
+		kinect.createCloud(dst, cloud);
+#endif
 
 		// Down sampling
 		pcl::VoxelGrid<pcl::PointXYZ> sorVoxel;
