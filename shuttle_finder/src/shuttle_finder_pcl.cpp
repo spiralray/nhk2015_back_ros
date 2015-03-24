@@ -308,13 +308,15 @@ void thread_main(){
 		sorVoxel.setLeafSize (0.01f, 0.01f, 0.01f);
 		sorVoxel.filter (*cloud_filtered);
 
+#if 1
 		if( cloud_filtered->points.empty() ) continue;
 		//Remove noise
 		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
 		sor.setInputCloud (cloud_filtered);
-		sor.setMeanK (50);
-		sor.setStddevMulThresh (0.03);
+		sor.setMeanK (8);
+		sor.setStddevMulThresh (1.0);
 		sor.filter (*cloud_filtered);
+#endif
 
 		if( cloud_filtered->points.empty() ) continue;
 		// Remove too near points
@@ -334,7 +336,7 @@ void thread_main(){
 		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("x");
-		pass.setFilterLimits (-4, 4);
+		pass.setFilterLimits (-3.5, 3.5);
 		pass.filter (*cloud_global);
 
 		if( debug ){
@@ -348,7 +350,7 @@ void thread_main(){
 		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
-		pass.setFilterLimits (1.7, 10);
+		pass.setFilterLimits (1.9, 10);
 		pass.filter (*cloud_global);
 
 		if( cloud_global->points.empty() ) continue;
@@ -360,13 +362,13 @@ void thread_main(){
 		std::vector<pcl::PointIndices> cluster_indices;
 		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
 
-		ec.setClusterTolerance (0.4);
+		ec.setClusterTolerance (0.2);
 
-		ec.setMinClusterSize (10);//最小のクラスターの値を設定
-		ec.setMaxClusterSize (250);//最大のクラスターの値を設定
-		ec.setSearchMethod (tree);//検索に使用する手法を指定
-		ec.setInputCloud (cloud_global);//点群を入力
-		ec.extract (cluster_indices);//クラスター情報を出力
+		ec.setMinClusterSize (10);
+		ec.setMaxClusterSize (150);
+		ec.setSearchMethod (tree);
+		ec.setInputCloud (cloud_global);
+		ec.extract (cluster_indices);
 
 		int j = 0;
 		float colors[6][3] ={{255, 0, 0}, {0,255,0}, {0,0,255}, {255,255,0}, {0,255,255}, {255,0,255}};
