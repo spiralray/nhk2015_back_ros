@@ -370,18 +370,6 @@ void thread_main(){
 		ec.setInputCloud (cloud_global);
 		ec.extract (cluster_indices);
 
-		int j = 0;
-		float colors[6][3] ={{255, 0, 0}, {0,255,0}, {0,0,255}, {255,255,0}, {0,255,255}, {255,0,255}};
-		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZRGB>);
-		pcl::copyPointCloud(*cloud_global, *cloud_cluster);
-
-		#pragma omp parallel for
-		for(unsigned int i = 0; i < cloud_cluster->points.size(); i++){
-			cloud_cluster->points[i].r = 255.0f;
-			cloud_cluster->points[i].g = 255.0f;
-			cloud_cluster->points[i].b = 255.0f;
-		}
-
 
 		int count;
 		double gx,gy,gz;
@@ -399,10 +387,6 @@ void thread_main(){
 				gy += cloud_global->points[*pit].y;
 				gz += cloud_global->points[*pit].z;
 				count++;
-
-				cloud_cluster->points[*pit].r = colors[j%6][0];
-				cloud_cluster->points[*pit].g = colors[j%6][1];
-				cloud_cluster->points[*pit].b = colors[j%6][2];
 			}
 
 			gx = gx/count;
@@ -415,8 +399,6 @@ void thread_main(){
 
 			shuttle_pub.publish(shuttle);
 			//ROS_ERROR( "%.3lf %.3lf %.3lf", gx, gy, gz );
-
-			j++;
 		}
 
 
