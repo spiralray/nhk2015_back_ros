@@ -64,11 +64,11 @@ def predictOrbit(mu):
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
     if t[2,0] <= -1.5:
-        roll_pub.publish( std_msgs.msg.Float32(0) )
+        roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         return
     
-    for var in range(0, 100):
+    for var in range(0, 200):
         '''
         if k.mu[2] < 0:
             break
@@ -110,7 +110,7 @@ def predictOrbit(mu):
             
             #rospy.logerr("%d", var)
             
-            if var < 35:
+            if var < 60:
                 slide_pub.publish( std_msgs.msg.Float32(slide_x) )
             else:
                 slide_pub.publish( std_msgs.msg.Float32(0.0) )
@@ -118,7 +118,7 @@ def predictOrbit(mu):
             return
         k.predict(0.01)
         
-    roll_pub.publish( std_msgs.msg.Float32(0) )
+    roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
     slide_pub.publish( std_msgs.msg.Float32(0) )
 
 def poseCallback(msg):
@@ -157,7 +157,7 @@ def time_callback(event):
         predictOrbit(copy.copy(s.mu))
         
     elif mode == 1:
-        roll_target = -2.6
+        roll_target = -2.43
         slide_target = -0.079
         roll_pub.publish( std_msgs.msg.Float32(roll_target) )
         slide_pub.publish( std_msgs.msg.Float32(slide_target) )

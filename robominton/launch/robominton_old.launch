@@ -12,14 +12,12 @@
 
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   <param name="/shuttleFinder/debug" value="false" />
-  <include file="$(find shuttle_finder)/launch/shuttle_finder_pcl.launch"/>
+  <include file="$(find shuttle_finder)/launch/shuttle_finder.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
   
   <node name="joy" pkg="joy" type="joy_node" />
   <node name="manual" pkg="robominton" type="manual" />
   <node name="arm_pose" pkg="robominton" type="arm_pose.py" />
-
-  <include file="$(find extdev)/launch/server.launch"/>
 
 </launch>
