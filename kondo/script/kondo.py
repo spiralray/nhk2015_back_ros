@@ -33,7 +33,7 @@ def callback(msg):
     pubmsg = servo()
     pubmsg.stamp = rospy.get_rostime()
     pubmsg.id = msg.id
-    pubmsg.angle = (k.setAngle(msg.id, 7500 + msg.angle/0.000589049 )-7500) * 0.000589049
+    pubmsg.angle = (k.setAngle(msg.id, 7500 + msg.angle/(0.000383495*6/5) )-7500) * (0.000383495*6/5)
     pub.publish( pubmsg )
     
 if __name__ == '__main__':

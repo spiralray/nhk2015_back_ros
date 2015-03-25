@@ -23,7 +23,7 @@ import threading
 import math
 
 def callback(msg):
-    kinect.publish( std_msgs.msg.Float32(msg.angle - 144*0.000589049 ) )
+    kinect.publish( std_msgs.msg.Float32(msg.angle - 144*(0.000383495*6/5) ) )
     
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
