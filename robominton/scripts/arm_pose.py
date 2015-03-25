@@ -45,7 +45,7 @@ def getTransformMatrixToRacketCoordinate():
     A =  np.mat([
           [1,0,0,0],
          [0,1,0,-0.222],
-         [0,0,1,-0.658],
+         [0,0,1,-0.670],
          [0,0,0,1]
         ])
     At =  np.mat([
@@ -63,37 +63,39 @@ def predictOrbit(mu):
     
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
-    if t[2,0] <= -1.5:
-        roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
-        slide_pub.publish( std_msgs.msg.Float32(0) )
+    
+    print t.T
+    
+    if t[2,0] <= -0:
         return
     
     for var in range(0, 200):
-        '''
-        if k.mu[2] < 0:
-            break
-        '''
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
         t=T*p
         if t[2,0] <= 0:
-            #print t.T
-            '''
-            y = t[1,0]/racket_length
+            
+            if math.sqrt(t[0,0]**2 + t[1,0]**2) > 5.0:
+                roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
+                slide_pub.publish( std_msgs.msg.Float32(0) )
+                return
+            
+            y = -t[1,0]/racket_length
             if y > 1:
-                racket_spin = 0
+                y=1
             elif y < -1:
-                racket_spin = math.pi
-            else:
-                racket_spin = math.fabs( math.pi/2 - math.asin(y))
+                y=-1
+            
+            racket_spin = math.fabs( math.pi/2 - math.asin(y))
             if t[0,0] < 0:
                 racket_spin = -racket_spin
+            
             '''
-            
             racket_spin = -math.atan2(-t[0,0], -t[1,0])
-            
+            '''
+                
             racket_x = math.sin(racket_spin)*racket_length
             slide_x = t[0,0] - racket_x
-                
+            
                 
             if slide_x > 0.24:
                 slide_x = 0.24
@@ -110,7 +112,7 @@ def predictOrbit(mu):
             
             #rospy.logerr("%d", var)
             
-            if var < 60:
+            if var < 50:
                 slide_pub.publish( std_msgs.msg.Float32(slide_x) )
             else:
                 slide_pub.publish( std_msgs.msg.Float32(0.0) )
@@ -161,8 +163,11 @@ def shuttleCallback(msg):
 
 def time_callback(event):
     global wait_flag
-    s.predict(0.01)
-    s.predict(0.01)
+    
+    t = rospy.Time.now().to_sec() - time
+    
+    for var in range(0, 4):
+        s.predict(t/4)
     
     if swing < -3000 and swing_power==0:
         wait_flag = True
@@ -213,9 +218,10 @@ if __name__ == '__main__':
     rospy.Subscriber("/mb1/motor3", std_msgs.msg.Float32, motor3Callback)
     rospy.Subscriber("/mb1/enc3", std_msgs.msg.Float32, enc3Callback)
     
+    time = rospy.Time.now().to_sec()
     rospy.Subscriber("/shuttle/status", shuttle_msg, shuttleCallback)
     
-    rospy.Timer(rospy.Duration(0.02), time_callback)
+    rospy.Timer(rospy.Duration(0.04), time_callback)
     
     rospy.spin()
     
