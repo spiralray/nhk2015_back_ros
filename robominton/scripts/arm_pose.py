@@ -141,6 +141,16 @@ def enc2Callback(msg):
     #print msg
     roll = msg.data
     
+def enc3Callback(msg):
+    global swing
+    #print msg
+    swing = msg.data
+    
+def motor3Callback(msg):
+    global swing_power
+    #print msg
+    swing_power = msg.data
+
 def shuttleCallback(msg):
     global time
     #print msg
@@ -150,9 +160,20 @@ def shuttleCallback(msg):
     #predictOrbit(copy.copy(s.mu))
 
 def time_callback(event):
+    global wait_flag
     s.predict(0.01)
     s.predict(0.01)
-    if mode == 0:
+    
+    if swing < -3000 and swing_power==0:
+        wait_flag = True
+    elif swing > -300:
+        wait_flag = False
+        
+    if wait_flag == True:
+        roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
+        slide_pub.publish( std_msgs.msg.Float32(0) )
+        
+    elif mode == 0:
         servearm_pub.publish( std_msgs.msg.Float32(0.01) )
         predictOrbit(copy.copy(s.mu))
         
@@ -186,6 +207,11 @@ if __name__ == '__main__':
     rospy.Subscriber("/mb1/enc1", std_msgs.msg.Float32, enc1Callback)
     roll = 0
     rospy.Subscriber("/mb1/enc2", std_msgs.msg.Float32, enc2Callback)
+    swing = 0
+    swing_power = 0
+    wait_flag = False
+    rospy.Subscriber("/mb1/motor3", std_msgs.msg.Float32, motor3Callback)
+    rospy.Subscriber("/mb1/enc3", std_msgs.msg.Float32, enc3Callback)
     
     rospy.Subscriber("/shuttle/status", shuttle_msg, shuttleCallback)
     
