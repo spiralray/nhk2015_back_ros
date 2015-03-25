@@ -20,6 +20,9 @@ import std_msgs.msg
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import PoseStamped
 from _shuttle_msg import shuttle_msg
+from geometry_msgs.msg import PointStamped
+
+from visualization_msgs.msg import Marker
 
 import math
 
@@ -54,7 +57,13 @@ def getTransformMatrixToRacketCoordinate():
           [0,-math.sin(-math.pi/4),math.cos(-math.pi/4),0],
           [0,0,0,1]
         ])
-    return At*A*Rt*R
+    Rev =  np.mat([
+         [1,0,0,0],
+         [0,-1,0,0],
+         [0,0,1,0],
+         [0,0,0,1]
+        ])
+    return Rev*At*A*Rt*R
     
 def predictOrbit(mu):
     k = shuttle.Shuttle( mu )
@@ -64,22 +73,39 @@ def predictOrbit(mu):
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
     
-    print t.T
+    #print t.T
     
-    if t[2,0] <= -0:
+    if t[2,0] <= -4:
+        roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
+        slide_pub.publish( std_msgs.msg.Float32(0) )
+        return
+    
+    elif t[2,0] <= -0:
         return
     
     for var in range(0, 200):
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
+        
+        if k.mu[2] < -1:
+            break
+        
         t=T*p
         if t[2,0] <= 0:
+            
+            msg = PointStamped()
+            msg.header.frame_id = "/map"
+            msg.header.stamp = rospy.Time.now()
+            msg.point.x = k.mu[0]
+            msg.point.y = k.mu[1]
+            msg.point.z = k.mu[2]
+            pointPub.publish(msg)
             
             if math.sqrt(t[0,0]**2 + t[1,0]**2) > 5.0:
                 roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
                 slide_pub.publish( std_msgs.msg.Float32(0) )
                 return
             
-            y = -t[1,0]/racket_length
+            y = t[1,0]/racket_length
             if y > 1:
                 y=1
             elif y < -1:
@@ -125,49 +151,45 @@ def predictOrbit(mu):
 
 def poseCallback(msg):
     global pose
-    #print msg
     pose = msg.pose
     
 def modeCallback(msg):
     global mode
-    #print msg
     mode = msg.data
 
 def enc1Callback(msg):
     global slide
-    #print msg
     slide = msg.data
     
 def enc2Callback(msg):
     global roll
-    #print msg
     roll = msg.data
     
 def enc3Callback(msg):
     global swing
-    #print msg
     swing = msg.data
     
 def motor3Callback(msg):
     global swing_power
-    #print msg
     swing_power = msg.data
 
 def shuttleCallback(msg):
     global time
-    #print msg
     time = msg.stamp.to_sec()
     for i in range(0, 9):
         s.mu[i,0] = msg.data[i]
-    #predictOrbit(copy.copy(s.mu))
 
 def time_callback(event):
     global wait_flag
+    global time
     
-    t = rospy.Time.now().to_sec() - time
+    now = rospy.Time.now().to_sec()
+    t = now - time
+    time = now
     
     for var in range(0, 4):
         s.predict(t/4)
+        #s.predict(0.01)
     
     if swing < -3000 and swing_power==0:
         wait_flag = True
@@ -220,6 +242,8 @@ if __name__ == '__main__':
     
     time = rospy.Time.now().to_sec()
     rospy.Subscriber("/shuttle/status", shuttle_msg, shuttleCallback)
+    
+    pointPub = rospy.Publisher('/shuttle/hit', PointStamped, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.04), time_callback)
     
