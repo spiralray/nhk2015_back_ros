@@ -73,20 +73,31 @@ def predictOrbit(mu):
     p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
     t=T*p
     
-    #print t.T
+    msg = PointStamped()
+    msg.header.frame_id = "/map"
+    msg.header.stamp = rospy.Time.now()
+    msg.point.x = k.mu[0]
+    msg.point.y = k.mu[1]
+    msg.point.z = k.mu[2]
+    shuttlePub.publish(msg)
     
     if t[2,0] <= -4:
+        #rospy.logwarn('Shuttle is under ground') 
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         return
     
-    elif t[2,0] <= -0:
+    elif t[2,0] <= 0:
+        #rospy.logwarn('Shuttle is under ground') 
         return
+    
+    print t.T
     
     for var in range(0, 200):
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
         
         if k.mu[2] < -1:
+            #rospy.logwarn( 'Shuttle has passed through the racket')
             break
         
         t=T*p
@@ -114,10 +125,6 @@ def predictOrbit(mu):
             racket_spin = math.fabs( math.pi/2 - math.asin(y))
             if t[0,0] < 0:
                 racket_spin = -racket_spin
-            
-            '''
-            racket_spin = -math.atan2(-t[0,0], -t[1,0])
-            '''
                 
             racket_x = math.sin(racket_spin)*racket_length
             slide_x = t[0,0] - racket_x
@@ -197,6 +204,7 @@ def time_callback(event):
         wait_flag = False
         
     if wait_flag == True:
+        rospy.loginfo("racket is returning to home position")
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         
@@ -244,6 +252,7 @@ if __name__ == '__main__':
     rospy.Subscriber("/shuttle/status", shuttle_msg, shuttleCallback)
     
     pointPub = rospy.Publisher('/shuttle/hit', PointStamped, queue_size=1)
+    shuttlePub = rospy.Publisher('/shuttle/now', PointStamped, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.04), time_callback)
     
