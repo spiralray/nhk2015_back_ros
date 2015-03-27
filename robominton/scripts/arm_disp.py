@@ -76,12 +76,20 @@ def enc1Callback(msg):
     slide = msg.data
     
 def enc2Callback(msg):
-    global roll
-    roll = msg.data
+    global spin
+    spin = msg.data
     
 def enc3Callback(msg):
     global swing
     swing = msg.data
+    
+def motor1Callback(msg):
+    global slide_target
+    slide_target = msg.data
+    
+def motor2Callback(msg):
+    global spin_target
+    spin_target = msg.data
 
 def time_callback(event):
     
@@ -95,11 +103,7 @@ def time_callback(event):
     t = np.linalg.solve(T, p)
     
     yaw = -math.atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z)
-    #q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+roll, yaw)
-    #q2 = tf.transformations.quaternion_from_euler(0, 0, -math.pi/4)
-    #quaternion = tf.transformations.quaternion_multiply(q2,q1)
-    
-    q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+roll, 0)
+    q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+spin, 0)
     q2 = tf.transformations.quaternion_from_euler(math.pi/4, 0, 0)
     q3 = tf.transformations.quaternion_from_euler(0, 0, yaw)
     quaternion = tf.transformations.quaternion_multiply(tf.transformations.quaternion_multiply(q3,q2),q1)
@@ -125,6 +129,31 @@ def time_callback(event):
     marker.color.b = 0.0
     markerPub.publish (marker)
     
+    p = np.mat( [
+        [slide_target],
+        [0],
+        [0],
+        [1] ] )
+    
+    t = np.linalg.solve(T, p)
+    q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+spin_target, 0)
+    q2 = tf.transformations.quaternion_from_euler(math.pi/4, 0, 0)
+    q3 = tf.transformations.quaternion_from_euler(0, 0, yaw)
+    quaternion = tf.transformations.quaternion_multiply(tf.transformations.quaternion_multiply(q3,q2),q1)
+    
+    marker.pose.position.x = t[0,0]
+    marker.pose.position.y = t[1,0]
+    marker.pose.position.z = t[2,0]
+    marker.pose.orientation.x = quaternion[0]
+    marker.pose.orientation.y = quaternion[1]
+    marker.pose.orientation.z = quaternion[2]
+    marker.pose.orientation.w = quaternion[3]
+    marker.color.a = 1.0
+    marker.color.r = 0.0
+    marker.color.g = 0.0
+    marker.color.b = 1.0
+    markTargetPub.publish (marker)
+    
 if __name__ == '__main__':
 
     argv = rospy.myargv(sys.argv)
@@ -135,12 +164,18 @@ if __name__ == '__main__':
         
     slide = 0
     rospy.Subscriber("/mb1/enc1", std_msgs.msg.Float32, enc1Callback)
-    roll = 0
+    spin = 0
     rospy.Subscriber("/mb1/enc2", std_msgs.msg.Float32, enc2Callback)
     swing = 0
     rospy.Subscriber("/mb1/enc3", std_msgs.msg.Float32, enc3Callback)
     
+    slide_target = 0
+    rospy.Subscriber("/mb1/motor1", std_msgs.msg.Float32, motor1Callback)
+    spin_target = 0
+    rospy.Subscriber("/mb1/motor2", std_msgs.msg.Float32, motor2Callback)
+    
     markerPub = rospy.Publisher('/robot/arm', Marker, queue_size=1)
+    markTargetPub = rospy.Publisher('/robot/armtarget', Marker, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.04), time_callback)
     
