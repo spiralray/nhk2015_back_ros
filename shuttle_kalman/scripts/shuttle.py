@@ -22,13 +22,13 @@ class Shuttle:
         
         self.PEst = np.eye(9)
         
-        self.Q = np.diag([0.01,0.01,0.01,1.,1.,1.,1.,1.,1.])*(10**-2)
-        self.R = np.diag([0.05,0.05,0.05])*(10**-1)
+        self.Q = np.diag([0.05,0.05,0.05,0.1,0.1,0.1,1.,1.,1.])*(10**-2)
+        self.R = np.diag([0.05,0.05,0.05])*(10**-1.5)
         
         #To set acceleration
         self.predict(0.00)
         
-        self.PEst = np.eye(9)
+        self.PEst = np.diag([1,1,1,2.,2.,2.,1.,1.,1.])
         
     def getB(self, period):
         return np.mat([

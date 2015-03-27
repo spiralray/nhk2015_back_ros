@@ -253,7 +253,7 @@ void thread_main(){
 		Line *left  = NULL;
 
 		for(int i=0;i<linecount;i++){
-			double line_yaw = lines[i].theta - yaw;
+			double line_yaw = lines[i].theta + yaw;
 			if( line_yaw > -CV_PI*3/4 && line_yaw < -CV_PI/4 && front == NULL ){
 				front = &(lines[i]);
 			}
@@ -277,6 +277,8 @@ void thread_main(){
 				if(right->theta >=0)	yaw = right->theta-CV_PI;
 				else					yaw = right->theta+CV_PI;
 			}
+
+			yaw = -yaw;
 
 			float cr2 = cos(0*0.5);
 			float cp2 = cos(0*0.5);
@@ -314,8 +316,8 @@ void thread_main(){
 		//double yaw_deg = yaw*180/CV_PI;
 		//ROS_INFO("yaw=%f[deg] x=%f[m] y=%f[m]",yaw_deg, pose.pose.position.x, pose.pose.position.y );
 
-		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(-yaw-M_PI/2);
-		pose.pose.position.y += DISTANCE_LRF_TO_CENTER*sin(-yaw-M_PI/2);
+		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(yaw-M_PI/2);
+		pose.pose.position.y += DISTANCE_LRF_TO_CENTER*sin(yaw-M_PI/2);
 
 		pose.pose.position.y += FENCE_WIDTH / 2 + FENCE_DEPTH;
 
