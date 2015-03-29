@@ -323,7 +323,7 @@ void thread_main(){
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud (cloud_filtered);
 		pass.setFilterFieldName ("y");
-		pass.setFilterLimits (0.5, 10.0);
+		pass.setFilterLimits (1.0, 10.0);
 		//pass.setFilterLimitsNegative (true);
 		pass.filter (*cloud_filtered);
 
@@ -350,7 +350,7 @@ void thread_main(){
 		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
-		pass.setFilterLimits (1.9, 10);
+		pass.setFilterLimits (2.05, 10);
 		pass.filter (*cloud_global);
 
 		if( cloud_global->points.empty() ) continue;
