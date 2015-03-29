@@ -22,6 +22,4 @@
   <node name="arm_pose" pkg="robominton" type="arm_pose.py" />
   <node name="arm_disp" pkg="robominton" type="arm_disp.py" />
 
-  <include file="$(find extdev)/launch/server.launch"/>
-
 </launch>

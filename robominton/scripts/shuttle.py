@@ -13,8 +13,8 @@ import math
 
 class Shuttle:
     resist_coeff = 0.0008
-    gravity = 9.8
-    mass = 0.005
+    gravity = 9.79708
+    mass = 0.0052
 
     
     def __init__(self, mu):

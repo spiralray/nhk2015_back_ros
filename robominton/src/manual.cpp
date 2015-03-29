@@ -69,7 +69,7 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		air.data = 0;
 		air_pub.publish(air);
 	}
-	if( joy->buttons[PS3_BUTTON_START] && mode.data != 0 ){
+	if( joy->buttons[PS3_BUTTON_START] && mode.data == 1 ){
 
 		std_msgs::Float32 wheel1, wheel2, wheel3;
 		wheel1.data = 0.0f;
@@ -88,17 +88,27 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 		ros::Duration(0.18).sleep();
 
+		mode.data = 0;
+		mode_pub.publish(mode);
+
 		std_msgs::Float32 swing;
 		swing.data = 1.0f;
 		swing_pub.publish(swing);
 
 		ros::Duration(0.3).sleep();
-
-		mode.data = 0;
-		mode_pub.publish(mode);
 	}
 	else{
 
+		if( mode.data != 1 ){
+			if( joy->buttons[PS3_BUTTON_ACTION_CROSS] ){
+				mode.data = 2;
+				mode_pub.publish(mode);
+			}
+			else if(mode.data == 2){
+				mode.data = 0;
+				mode_pub.publish(mode);
+			}
+		}
 		std_msgs::Float32 swing;
 		if(joy->buttons[PS3_BUTTON_ACTION_SQUARE]) swing.data = 0.5f;
 		else if(joy->buttons[PS3_BUTTON_ACTION_TRIANGLE]) swing.data = 1.0f;
