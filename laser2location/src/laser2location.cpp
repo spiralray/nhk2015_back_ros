@@ -22,7 +22,7 @@ int threshold;
 
 #define DISTANCE_LRF_TO_CENTER	0.455	//[m]
 #define FENCE_WIDTH				0.04	//[m]
-#define FENCE_DEPTH				8.2
+#define FENCE_DEPTH				0
 
 pthread_mutex_t	mutex;  // MUTEX
 sensor_msgs::LaserScan lasermsg;

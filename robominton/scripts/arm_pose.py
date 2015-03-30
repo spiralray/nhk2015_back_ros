@@ -155,8 +155,8 @@ def predictOrbit(mu):
                 roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
             else:
                 slide_pub.publish( std_msgs.msg.Float32(0.0) )
-                if math.fabs(racket_spin - roll)*180/math.pi /(0.01*var) > 120 :
-                    roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
+                #if math.fabs(racket_spin - roll)*180/math.pi /(0.01*var) > 30 :
+                roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
                 
             return
         k.predict(0.01)
