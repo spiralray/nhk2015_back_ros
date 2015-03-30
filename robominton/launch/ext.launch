@@ -1,0 +1,12 @@
+<launch>
+
+  <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
+  <param name="/shuttleFinder/debug" value="true" />
+  <include file="$(find shuttle_finder)/launch/pclext.launch"/>
+  
+  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
+  <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
+
+  <include file="$(find extdev)/launch/extdev.launch"/>
+
+</launch>
