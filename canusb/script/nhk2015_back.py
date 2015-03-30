@@ -93,11 +93,12 @@ def mb1motor2(msg):
     pub.publish( send )
     
 def mb1swing(msg):
-    send = CAN()
-    send.stdId = 0x122
-    send.extId = -1
-    send.data = struct.pack('f', msg.data)
-    pub.publish( send )
+    if mode !=2:
+        send = CAN()
+        send.stdId = 0x122
+        send.extId = -1
+        send.data = struct.pack('f', msg.data)
+        pub.publish( send )
     
 def mb2motor(msg):
     send = CAN()
@@ -115,23 +116,19 @@ def handCallback(msg):
     else:
         send.data = [0x00]
     pub.publish( send )
-     
-def listener():
-    rospy.Subscriber("canrx", CAN, callback)
-    rospy.Subscriber("/omni/motor1", std_msgs.msg.Float32, omni1)
-    rospy.Subscriber("/omni/motor2", std_msgs.msg.Float32, omni2)
-    rospy.Subscriber("/omni/motor3", std_msgs.msg.Float32, omni3)
     
-    rospy.Subscriber("/mb1/motor1", std_msgs.msg.Float32, mb1motor1)
-    rospy.Subscriber("/mb1/motor2", std_msgs.msg.Float32, mb1motor2)
-    rospy.Subscriber("/mb1/swing", std_msgs.msg.Float32, mb1swing)
+def modeCallback(msg):
+    global mode
+    mode = msg.data
     
-    rospy.Subscriber("/mb2/motor", std_msgs.msg.Float32, mb2motor)
-    
-    rospy.Subscriber("/hand", std_msgs.msg.Byte, handCallback)
-    
-    rospy.spin()
-            
+def autoSwingCallback(msg):
+    if mode ==2:
+        send = CAN()
+        send.stdId = 0x122
+        send.extId = -1
+        send.data = struct.pack('f', msg.data)
+        pub.publish( send )
+        
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('canMachine')
@@ -153,6 +150,24 @@ if __name__ == '__main__':
     r1350 = rospy.Publisher('/yaw', std_msgs.msg.Float32, queue_size=1)
     
                 
-    listener()
+    rospy.Subscriber("canrx", CAN, callback)
+    rospy.Subscriber("/omni/motor1", std_msgs.msg.Float32, omni1)
+    rospy.Subscriber("/omni/motor2", std_msgs.msg.Float32, omni2)
+    rospy.Subscriber("/omni/motor3", std_msgs.msg.Float32, omni3)
+    
+    rospy.Subscriber("/mb1/motor1", std_msgs.msg.Float32, mb1motor1)
+    rospy.Subscriber("/mb1/motor2", std_msgs.msg.Float32, mb1motor2)
+    rospy.Subscriber("/mb1/swing", std_msgs.msg.Float32, mb1swing)
+    
+    rospy.Subscriber("/mb2/motor", std_msgs.msg.Float32, mb2motor)
+    
+    rospy.Subscriber("/hand", std_msgs.msg.Byte, handCallback)
+    
+    mode = 0
+    rospy.Subscriber("/robot/mode", std_msgs.msg.Int32, modeCallback)
+    rospy.Subscriber("/auto/swing", std_msgs.msg.Float32, autoSwingCallback)
+    
+    rospy.spin()
+    
     print ""
     print "close"

@@ -47,8 +47,8 @@ def getTransformMatrixToRacketCoordinate():
         ])
     A =  np.mat([
           [1,0,0,0],
-         [0,1,0,-0.222],
-         [0,0,1,-0.670],
+         [0,1,0,-0.222-0.08],
+         [0,0,1,-0.670-0.02],
          [0,0,0,1]
         ])
     At =  np.mat([
@@ -85,13 +85,18 @@ def predictOrbit(mu):
         #rospy.logwarn('Shuttle is under ground') 
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
+        swingPub.publish( std_msgs.msg.Float32(0) )
         return
     
-    elif t[2,0] <= 0:
-        #rospy.logwarn('Shuttle is under ground') 
+    elif t[2,0] <= 0.04:
+        #rospy.logwarn('Shuttle is under ground')
+        if math.sqrt(t[0,0]**2 + t[1,0]**2) < 2.0:
+            swingPub.publish( std_msgs.msg.Float32(1.0) )
         return
     
-    print t.T
+    #print t.T
+    
+    swingPub.publish( std_msgs.msg.Float32(0) )
     
     for var in range(0, 200):
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
@@ -141,20 +146,24 @@ def predictOrbit(mu):
             while racket_spin - roll < -math.pi:
                 racket_spin += 2*math.pi
                 
-            roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
+            
             
             #rospy.logerr("%d", var)
             
             if var < 50:
                 slide_pub.publish( std_msgs.msg.Float32(slide_x) )
+                roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
             else:
                 slide_pub.publish( std_msgs.msg.Float32(0.0) )
+                if math.fabs(racket_spin - roll)*180/math.pi /(0.01*var) > 120 :
+                    roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
                 
             return
         k.predict(0.01)
         
     roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
     slide_pub.publish( std_msgs.msg.Float32(0) )
+    swingPub.publish( std_msgs.msg.Float32(0) )
 
 def poseCallback(msg):
     global pose
@@ -196,7 +205,6 @@ def time_callback(event):
     
     for var in range(0, 4):
         s.predict(t/4)
-        #s.predict(0.01)
     
     if swing < -3000 and swing_power==0:
         wait_flag = True
@@ -208,10 +216,6 @@ def time_callback(event):
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         
-    elif mode == 0:
-        servearm_pub.publish( std_msgs.msg.Float32(0.01) )
-        predictOrbit(copy.copy(s.mu))
-        
     elif mode == 1:
         roll_target = -2.43
         slide_target = -0.079
@@ -219,6 +223,10 @@ def time_callback(event):
         slide_pub.publish( std_msgs.msg.Float32(slide_target) )
         if abs( roll_target - roll ) < math.pi/180 and abs( slide_target - slide ) < 0.01:
             servearm_pub.publish( std_msgs.msg.Float32(0.29) )
+        
+    else:
+        servearm_pub.publish( std_msgs.msg.Float32(0.01) )
+        predictOrbit(copy.copy(s.mu))
     
 if __name__ == '__main__':
 
@@ -253,8 +261,9 @@ if __name__ == '__main__':
     
     pointPub = rospy.Publisher('/shuttle/hit', PointStamped, queue_size=1)
     shuttlePub = rospy.Publisher('/shuttle/now', PointStamped, queue_size=1)
+    swingPub = rospy.Publisher('/auto/swing', std_msgs.msg.Float32, queue_size=1)
     
-    rospy.Timer(rospy.Duration(0.04), time_callback)
+    rospy.Timer(rospy.Duration(0.02), time_callback)
     
     rospy.spin()
     
