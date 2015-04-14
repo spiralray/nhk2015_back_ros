@@ -62,6 +62,8 @@ private:
 	float dt;
 	float MAX_ACCEL;
 
+	bool joy_recieved;
+
 };
 
 
@@ -69,6 +71,8 @@ Machine::Machine()
 {
 	MAX_ACCEL = 1.0;
 	dt = 0.03;
+
+	joy_recieved = false;
 
 	swing_pub = nh.advertise<std_msgs::Float32>("/mb1/swing", 1);
 	air_pub = nh.advertise<std_msgs::Byte>("/hand", 1);
@@ -97,13 +101,15 @@ void Machine::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 	pthread_mutex_lock( &pose_mutex );
 	pose = msg->pose;
 	pthread_mutex_unlock( &pose_mutex );
-
 }
 
 
 void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& j)
 {
+	joy_recieved = true;
+
 	copy(j->buttons.begin(), j->buttons.end(), back_inserter(joy.buttons) );
+	copy(j->axes.begin(), j->axes.end(), back_inserter(joy.axes) );
 }
 
 void Machine::enc1Callback(const std_msgs::Float32::ConstPtr& msg){
@@ -117,6 +123,8 @@ void Machine::enc3Callback(const std_msgs::Float32::ConstPtr& msg){
 }
 
 void Machine::timerCallback(const ros::TimerEvent& event){
+
+	if( !joy_recieved ) return;
 
 	if( joy.buttons[PS3_BUTTON_SELECT] && mode.data != 1 ){
 		mode.data = 1;
