@@ -74,6 +74,8 @@ Machine::Machine()
 
 	joy_recieved = false;
 
+	encoder[0] = encoder[1] = encoder[2] = 0.0f;
+
 	swing_pub = nh.advertise<std_msgs::Float32>("/mb1/swing", 1);
 	air_pub = nh.advertise<std_msgs::Byte>("/hand", 1);
 
@@ -209,7 +211,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		motor3_pub.publish(wheel3);
 
 		//ROS_INFO("%.3f", joyspin);
-		ROS_INFO("%.3f %.3f", joyrad, joyslope);
+		//ROS_INFO("%.3f %.3f", joyrad, joyslope);
 	}
 
 
@@ -285,11 +287,11 @@ void Machine::calcOmniWheel( float rad, float speed ){
 					break;
 				}
 			}
+		}
 
-			if( flag_in_range == true){
-				for(int i=0; i<3; i++) target_speed[i] = k*t[i];
-				return;
-			}
+		if( flag_in_range == true){
+			for(int i=0; i<3; i++) target_speed[i] = k*t[i];
+			return;
 		}
 
 	}
