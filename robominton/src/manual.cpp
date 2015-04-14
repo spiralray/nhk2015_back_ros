@@ -26,7 +26,10 @@ private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
 	void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 	void timerCallback(const ros::TimerEvent& event);
-	void calcOmniWheel( float joyrad, float joypow );
+	void calcOmniWheel( float rad, float speed );
+	void enc1Callback(const std_msgs::Float32::ConstPtr& msg);
+	void enc2Callback(const std_msgs::Float32::ConstPtr& msg);
+	void enc3Callback(const std_msgs::Float32::ConstPtr& msg);
 
 	ros::NodeHandle nh;
 
@@ -38,6 +41,7 @@ private:
 	ros::Subscriber joy_sub;
 	ros::Subscriber pose_sub;
 	ros::Timer timer;
+	ros::Subscriber enc1_sub, enc2_sub, enc3_sub;
 
 	ros::Publisher motor1_pub;
 	ros::Publisher motor2_pub;
@@ -53,18 +57,29 @@ private:
 	sensor_msgs::Joy joy;
 
 	float target_speed[3];
+	float encoder[3];
+
+	float dt;
+	float MAX_ACCEL;
 
 };
 
 
 Machine::Machine()
 {
-	swing_pub = nh.advertise<std_msgs::Float32>("mb1/swing", 1);
+	MAX_ACCEL = 1.0;
+	dt = 0.03;
+
+	swing_pub = nh.advertise<std_msgs::Float32>("/mb1/swing", 1);
 	air_pub = nh.advertise<std_msgs::Byte>("/hand", 1);
 
 	joy_sub = nh.subscribe<sensor_msgs::Joy>("joy", 10, &Machine::joyCallback, this);
 	pose_sub = nh.subscribe("/robot/pose", 10, &Machine::poseCallback, this);
-	timer = nh.createTimer(ros::Duration(0.03), &Machine::timerCallback, this);
+	timer = nh.createTimer(ros::Duration(this->dt), &Machine::timerCallback, this);
+
+	enc1_sub = nh.subscribe("/mb1/enc1", 1, &Machine::enc1Callback, this);
+	enc2_sub = nh.subscribe("/mb1/enc2", 1, &Machine::enc2Callback, this);
+	enc3_sub = nh.subscribe("/mb1/enc3", 1, &Machine::enc3Callback, this);
 
 
 	motor1_pub = nh.advertise<std_msgs::Float32>("/omni/motor1", 1);
@@ -89,6 +104,16 @@ void Machine::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& j)
 {
 	copy(j->buttons.begin(), j->buttons.end(), back_inserter(joy.buttons) );
+}
+
+void Machine::enc1Callback(const std_msgs::Float32::ConstPtr& msg){
+	encoder[0] = msg->data;
+}
+void Machine::enc2Callback(const std_msgs::Float32::ConstPtr& msg){
+	encoder[1] = msg->data;
+}
+void Machine::enc3Callback(const std_msgs::Float32::ConstPtr& msg){
+	encoder[2] = msg->data;
 }
 
 void Machine::timerCallback(const ros::TimerEvent& event){
@@ -180,15 +205,95 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 	//ROS_INFO("%.3f %.3f %.3f", target_speed[0], target_speed[1], target_speed[2] );
 }
 
-void Machine::calcOmniWheel( float joyrad, float joyslope ){
+void Machine::calcOmniWheel( float rad, float speed ){
 
-	if(joyslope > 0){
-		target_speed[0] = joyslope * -sin( joyrad - M_PI/6 );
-		target_speed[1] = joyslope * -cos( joyrad );
-		target_speed[2] = joyslope * -sin( joyrad - M_PI*5/6 );
+	float speed_u= 0.0, speed_v=  0.0;
+	float t[3];
+
+	float acc = MAX_ACCEL*this->dt;
+
+	//------------------------------------------------------------ Calc now speed
+	speed_u -= encoder[0]*sin( -M_PI/6 );
+	speed_v -= encoder[0]*cos( -M_PI/6 );
+
+	speed_u -= encoder[1]*sin( M_PI/2 );
+	speed_v -= encoder[1]*cos( M_PI/2 );
+
+	speed_u -= encoder[2]*sin( -M_PI*5/6 );
+	speed_v -= encoder[2]*cos( -M_PI*5/6 );
+
+	//------------------------------------------------------------ Calc final target speeds of each wheels
+	if( speed > 0.0 ){
+		t[0] = speed * -sin( rad - M_PI/6 );
+		t[1] = speed * -cos( rad );
+		t[2] = speed * -sin( rad - M_PI*5/6 );
+
+		//------------------------------------------------------------ Prevent slip: slow acceleration
+		// We want to get max(k)
+		//
+		// 0 <= k <= 1
+		// -acc <= k*t[0]-encoder[0] << acc
+		// -acc <= k*t[1]-encoder[1] << acc
+		// -acc <= k*t[2]-encoder[2] << acc
+		//------------------------------------------------------------
+		// 0 <= k <= 1
+		// -acc + encoder[0] <= k*t[0] << acc + encoder[0]
+		// -acc + encoder[1] <= k*t[1] << acc + encoder[1]
+		// -acc + encoder[2] <= k*t[2] << acc + encoder[2]
+		//------------------------------------------------------------
+
+		bool flag_in_range = true;
+
+		float k = 1.0f;
+		for(int i=0; i<3; i++){
+
+			if( t[i] != 0.0f ){
+				float min_k;
+				float max_k;
+
+				if( t[i] > 0 ){
+					min_k = (-acc + encoder[i])/t[i];
+					max_k = ( acc + encoder[i])/t[i];
+				}
+				else{
+					max_k = (-acc + encoder[i])/t[i];
+					min_k = ( acc + encoder[i])/t[i];
+				}
+
+				if( min_k > 1.0f || max_k < 0 ){
+					flag_in_range = false;
+					break;
+				}
+
+				if( k > max_k ) k = max_k;
+
+			}
+			else{
+				if( !(-acc + encoder[i] <= 0.0f && 0.0f <= acc + encoder[i]) ){
+					flag_in_range = false;
+					break;
+				}
+			}
+
+			if( flag_in_range == true){
+				for(int i=0; i<3; i++) target_speed[i] = k*t[i];
+				return;
+			}
+		}
+
+	}
+
+	//------------------------------------------------------------ reduce speed
+	t[0] = t[1] = t[2] = 0.0f;
+
+	float max_enc = std::abs( std::max({encoder[0],encoder[1],encoder[2]}) );
+
+	if( max_enc > acc ){
+		float rate = (max_enc-acc)/max_enc;
+		for(int i=0; i<3; i++) target_speed[i] = rate*encoder[i];
 	}
 	else{
-		target_speed[0] = target_speed[1] = target_speed[2] = 0.0f;
+		target_speed[0] = target_speed[1] = target_speed[2] = 0.0;
 	}
 
 }
