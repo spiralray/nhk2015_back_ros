@@ -108,6 +108,8 @@ void Machine::joyCallback(const sensor_msgs::Joy::ConstPtr& j)
 {
 	joy_recieved = true;
 
+	joy.buttons.clear();
+	joy.axes.clear();
 	copy(j->buttons.begin(), j->buttons.end(), back_inserter(joy.buttons) );
 	copy(j->axes.begin(), j->axes.end(), back_inserter(joy.axes) );
 }
@@ -206,10 +208,11 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		motor2_pub.publish(wheel2);
 		motor3_pub.publish(wheel3);
 
+		//ROS_INFO("%.3f", joyspin);
+		ROS_INFO("%.3f %.3f", joyrad, joyslope);
 	}
 
-	//ROS_INFO("%.3f", joyspin);
-	//ROS_INFO("%.3f %.3f", joyrad, joyslope);
+
 	//ROS_INFO("%.3f %.3f %.3f", target_speed[0], target_speed[1], target_speed[2] );
 }
 
