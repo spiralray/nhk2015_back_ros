@@ -69,8 +69,8 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 1.0;
-	dt = 0.03;
+	MAX_ACCEL = 2.0;
+	dt = 0.02;
 
 	joy_recieved = false;
 
@@ -83,9 +83,9 @@ Machine::Machine()
 	pose_sub = nh.subscribe("/robot/pose", 10, &Machine::poseCallback, this);
 	timer = nh.createTimer(ros::Duration(this->dt), &Machine::timerCallback, this);
 
-	enc1_sub = nh.subscribe("/mb1/enc1", 1, &Machine::enc1Callback, this);
-	enc2_sub = nh.subscribe("/mb1/enc2", 1, &Machine::enc2Callback, this);
-	enc3_sub = nh.subscribe("/mb1/enc3", 1, &Machine::enc3Callback, this);
+	enc1_sub = nh.subscribe("/omni/enc1", 1, &Machine::enc1Callback, this);
+	enc2_sub = nh.subscribe("/omni/enc2", 1, &Machine::enc2Callback, this);
+	enc3_sub = nh.subscribe("/omni/enc3", 1, &Machine::enc3Callback, this);
 
 
 	motor1_pub = nh.advertise<std_msgs::Float32>("/omni/motor1", 1);
@@ -288,6 +288,8 @@ void Machine::calcOmniWheel( float rad, float speed ){
 				}
 			}
 		}
+
+		//ROS_INFO("%d %.3f %.3f %.3f",flag_in_range==true?1:0, k*t[0], k*t[1], k*t[2] );
 
 		if( flag_in_range == true){
 			for(int i=0; i<3; i++) target_speed[i] = k*t[i];
