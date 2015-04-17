@@ -25,12 +25,13 @@ int old_x = 0;
 int old_y = 0;
 
 bool laserReady = false;
+bool without_laser = false;
 
 void encXCallback(const std_msgs::Int32::ConstPtr& msg)
 {
 	static bool isFirst = true;
 
-	if(!laserReady) return;
+	if(!without_laser && !laserReady) return;
 
 	//ROS_INFO("X: [%d]", msg->data);
 	if(!isFirst){
@@ -47,7 +48,7 @@ void encYCallback(const std_msgs::Int32::ConstPtr& msg)
 {
 	static bool isFirst = true;
 
-	if(!laserReady) return;
+	if(!without_laser && !laserReady) return;
 
 	//ROS_INFO("Y: [%d]", msg->data);
 	if(!isFirst){
@@ -67,7 +68,7 @@ void imuCallback(const std_msgs::Float32::ConstPtr& msg)
 	static bool isFirst = true;
 	static float lastyaw = 0.0f;
 
-	if(!laserReady) return;
+	if(!without_laser && !laserReady) return;
 
 	//ROS_INFO("IMU: [%f][%f][%f][%f]", msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z );
 	if(!isFirst){
@@ -126,6 +127,18 @@ void laserCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "robotPose");
+
+	ros::NodeHandle local_nh("~");
+
+	  if (!local_nh.hasParam("without_laser")){
+		  without_laser = false;
+	  }
+	  else{
+		  if (!local_nh.getParam("without_laser", without_laser)){
+			  ROS_ERROR("parameter without_laser is invalid.");
+			  return -1;
+		  }
+	  }
 
 	ros::NodeHandle n;
 

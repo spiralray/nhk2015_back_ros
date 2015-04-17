@@ -69,7 +69,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 2.0;
+	MAX_ACCEL = 20.0;
 	dt = 0.02;
 
 	joy_recieved = false;
@@ -187,7 +187,11 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float joyx = - joy.axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
 		float joyy = joy.axes[PS3_AXIS_STICK_LEFT_UPWARDS];
 
-		float joyspin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
+		float joyspin;
+		//joyspin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
+
+		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
+		joyspin = yaw*2.0;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));

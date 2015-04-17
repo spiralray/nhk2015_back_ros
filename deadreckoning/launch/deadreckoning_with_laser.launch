@@ -1,0 +1,4 @@
+<launch>
+  <param name="/deadreckoning/without_laser" value="false" />
+  <node name="deadreckoning" pkg="deadreckoning" type="deadreckoning" />
+</launch>
