@@ -191,7 +191,21 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		//joyspin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
 		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
+		if( std::abs(yaw) > M_PI/4 ){
+			std_msgs::Float32 wheel1, wheel2, wheel3;
+			wheel1.data = 0;
+			wheel2.data = 0;
+			wheel3.data = 0;
+			motor1_pub.publish(wheel1);
+			motor2_pub.publish(wheel2);
+			motor3_pub.publish(wheel3);
+			ROS_ERROR("Out of control");
+			return;
+		}
+
 		joyspin = yaw*2.0;
+		if( joyspin > 1.0 ) joyspin = 1.0;
+		else if( joyspin < -1.0 ) joyspin = -1.0;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));
@@ -203,7 +217,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 
 		//ROS_INFO("%.3f %.3f", joyrad, joyslope);
 
-		calcOmniWheel( joyrad, 3.5*joyslope );
+		calcOmniWheel( joyrad, 2.5*joyslope );
 
 		std_msgs::Float32 wheel1, wheel2, wheel3;
 		wheel1.data = target_speed[0] - joyspin;
