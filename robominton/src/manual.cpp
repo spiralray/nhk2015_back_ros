@@ -26,7 +26,7 @@ private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
 	void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 	void timerCallback(const ros::TimerEvent& event);
-	void calcOmniWheel( float rad, float speed );
+	void calcOmniWheel( double sec, float rad, float speed );
 	void enc1Callback(const std_msgs::Float32::ConstPtr& msg);
 	void enc2Callback(const std_msgs::Float32::ConstPtr& msg);
 	void enc3Callback(const std_msgs::Float32::ConstPtr& msg);
@@ -69,7 +69,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 20.0;
+	MAX_ACCEL = 25.0;
 	dt = 0.02;
 
 	joy_recieved = false;
@@ -217,7 +217,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 
 		//ROS_INFO("%.3f %.3f", joyrad, joyslope);
 
-		calcOmniWheel( joyrad, 2.5*joyslope );
+		calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , joyrad, 2.5*joyslope );
 
 		std_msgs::Float32 wheel1, wheel2, wheel3;
 		wheel1.data = target_speed[0] - joyspin;
@@ -236,12 +236,14 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 	//ROS_INFO("%.3f %.3f %.3f", target_speed[0], target_speed[1], target_speed[2] );
 }
 
-void Machine::calcOmniWheel( float rad, float speed ){
+void Machine::calcOmniWheel( double sec, float rad, float speed ){
 
 	float speed_u= 0.0, speed_v=  0.0;
 	float t[3];
 
-	float acc = MAX_ACCEL*this->dt;
+	float acc = MAX_ACCEL*sec;
+
+	//ROS_INFO("%lf", sec);
 
 	//------------------------------------------------------------ Calc now speed
 	speed_u -= encoder[0]*sin( -M_PI/6 );
