@@ -101,7 +101,7 @@ def mb1swing(msg):
         	send.data = [0xff]
     	else:
         	send.data = [0x00]
-    pub.publish( send )
+        pub.publish( send )
     
 def mb2motor(msg):
     send = CAN()
@@ -119,10 +119,12 @@ def autoSwingCallback(msg):
         send = CAN()
     	send.stdId = 0x150
     	send.extId = -1
+        '''
     	if msg.data:
         	send.data = [0xff]
     	else:
         	send.data = [0x00]
+        '''
         
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
