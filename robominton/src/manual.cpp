@@ -69,7 +69,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 25.0;
+	MAX_ACCEL = 20.0;
 	dt = 0.02;
 
 	joy_recieved = false;
@@ -191,7 +191,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		//joyspin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
 		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
-		if( std::abs(yaw) > M_PI/4 ){
+		if( std::abs(yaw) > M_PI/6 ){
 			std_msgs::Float32 wheel1, wheel2, wheel3;
 			wheel1.data = 0;
 			wheel2.data = 0;
@@ -203,9 +203,11 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 			return;
 		}
 
+#define MAX_SPIN 0.3
+
 		joyspin = yaw*2.0;
-		if( joyspin > 1.0 ) joyspin = 1.0;
-		else if( joyspin < -1.0 ) joyspin = -1.0;
+		if( joyspin > MAX_SPIN ) joyspin = MAX_SPIN;
+		else if( joyspin < -MAX_SPIN ) joyspin = -MAX_SPIN;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));
