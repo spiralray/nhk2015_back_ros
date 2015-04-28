@@ -5,7 +5,7 @@
 #include <std_msgs/Byte.h>
 
 #include <geometry_msgs/PoseStamped.h>
-
+#include <geometry_msgs/PointStamped.h>
 
 #include <vector>
 #include <algorithm>    // std::copy
@@ -30,6 +30,7 @@ private:
 	void enc1Callback(const std_msgs::Float32::ConstPtr& msg);
 	void enc2Callback(const std_msgs::Float32::ConstPtr& msg);
 	void enc3Callback(const std_msgs::Float32::ConstPtr& msg);
+	void targetpointCallback(const geometry_msgs::PointStamped::ConstPtr& msg);
 
 	ros::NodeHandle nh;
 
@@ -49,6 +50,8 @@ private:
 
 	ros::Publisher mode_pub;
 
+	ros::Subscriber targetPoint_sub;
+
 	std_msgs::Int32 mode;
 
 	pthread_mutex_t	pose_mutex;  // MUTEX
@@ -58,6 +61,9 @@ private:
 
 	float target_speed[3];
 	float encoder[3];
+
+	bool target_recieved;
+	float target_x, target_y;
 
 	float dt;
 	float MAX_ACCEL;
@@ -73,6 +79,7 @@ Machine::Machine()
 	dt = 0.02;
 
 	joy_recieved = false;
+	target_recieved = false;
 
 	encoder[0] = encoder[1] = encoder[2] = 0.0f;
 
@@ -93,6 +100,8 @@ Machine::Machine()
 	motor3_pub = nh.advertise<std_msgs::Float32>("/omni/motor3", 1);
 
 	mode_pub = nh.advertise<std_msgs::Int32>("/robot/mode", 1);
+
+	targetPoint_sub = nh.subscribe("/robot/targetpoint", 1, &Machine::targetpointCallback, this);
 
 	target_speed[0] = target_speed[1] = target_speed[2] = 0.0f;
 
@@ -124,6 +133,12 @@ void Machine::enc2Callback(const std_msgs::Float32::ConstPtr& msg){
 }
 void Machine::enc3Callback(const std_msgs::Float32::ConstPtr& msg){
 	encoder[2] = msg->data;
+}
+
+void Machine::targetpointCallback(const geometry_msgs::PointStamped::ConstPtr& msg){
+	target_recieved = true;
+	target_x = msg->point.x;
+	target_y = msg->point.y;
 }
 
 void Machine::timerCallback(const ros::TimerEvent& event){
@@ -187,9 +202,6 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float joyx = - joy.axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
 		float joyy = joy.axes[PS3_AXIS_STICK_LEFT_UPWARDS];
 
-		float joyspin;
-		//joyspin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
-
 		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
 		if( std::abs(yaw) > M_PI/6 ){
 			std_msgs::Float32 wheel1, wheel2, wheel3;
@@ -205,32 +217,45 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 
 #define MAX_SPIN 0.3
 
-		joyspin = yaw*2.0;
-		if( joyspin > MAX_SPIN ) joyspin = MAX_SPIN;
-		else if( joyspin < -MAX_SPIN ) joyspin = -MAX_SPIN;
+		float spin;
+		//spin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
+
+		spin = yaw*2.0;
+		if( spin > MAX_SPIN ) spin = MAX_SPIN;
+		else if( spin < -MAX_SPIN ) spin = -MAX_SPIN;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));
 
-		float tmp;
-		tmp = fabs( M_PI/2 - fabs(joyrad) );
-		tmp = M_PI/4 - fabs( tmp - M_PI/4 );
-		joyslope = joyslope/sqrt( 1 + pow( tan(tmp), 2) );
+		if( target_recieved && joy.buttons[PS3_BUTTON_ACTION_CROSS] ){	//Automatic Mode
+			float diff_x = target_x - pose.position.x;
+			float diff_y = target_y - pose.position.y;
 
-		//ROS_INFO("%.3f %.3f", joyrad, joyslope);
-
-		calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , joyrad, 2.5*joyslope );
+			float target_deg = std::atan2(diff_y,diff_x) - yaw;
+			float target_speed = std::sqrt( std::pow(diff_x, 2) + std::pow(diff_y, 2) );
+			if( target_speed > 3 ) target_speed = 3;
+			//ROS_INFO("%.3f %.3f", target_deg, target_speed);
+			calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , target_deg, target_speed );
+		}
+		else{	//Manual Mode
+			float tmp;
+			tmp = fabs( M_PI/2 - fabs(joyrad) );
+			tmp = M_PI/4 - fabs( tmp - M_PI/4 );
+			joyslope = joyslope/sqrt( 1 + pow( tan(tmp), 2) );
+			//ROS_INFO("%.3f %.3f", joyrad, joyslope);
+			calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , joyrad, 2.5*joyslope );
+		}
 
 		std_msgs::Float32 wheel1, wheel2, wheel3;
-		wheel1.data = target_speed[0] - joyspin;
-		wheel2.data = target_speed[1] - joyspin;
-		wheel3.data = target_speed[2] - joyspin;
+		wheel1.data = target_speed[0] - spin;
+		wheel2.data = target_speed[1] - spin;
+		wheel3.data = target_speed[2] - spin;
 
 		motor1_pub.publish(wheel1);
 		motor2_pub.publish(wheel2);
 		motor3_pub.publish(wheel3);
 
-		//ROS_INFO("%.3f", joyspin);
+		//ROS_INFO("%.3f", spin);
 		//ROS_INFO("%.3f %.3f", joyrad, joyslope);
 	}
 
