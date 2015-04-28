@@ -119,12 +119,10 @@ def autoSwingCallback(msg):
         send = CAN()
     	send.stdId = 0x150
     	send.extId = -1
-        '''
     	if msg.data:
         	send.data = [0xff]
     	else:
         	send.data = [0x00]
-        '''
         
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
