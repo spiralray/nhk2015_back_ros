@@ -1,8 +1,14 @@
 <launch>
 
+  <node name="joy" pkg="joy" type="joy_node" />
+  <node name="hokuyo_node" pkg="hokuyo_node" type="hokuyo_node" />
+  <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
+  
+
   <include file="$(find laser2location)/launch/laser.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
 
+  <include file="$(find canusb)/launch/canusb.launch"/>
   <node name="canusb_third" pkg="canusb" type="nhk2015_third.py" />
 
   <param name="/shuttleFinder/debug" value="true" />
@@ -12,6 +18,8 @@
   
   <node name="third_pose" pkg="robominton" type="third.py" />
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
+
+  <node name="manual" pkg="robominton" type="manual" />
   
 
 </launch>
