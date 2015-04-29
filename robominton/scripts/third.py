@@ -28,6 +28,8 @@ import math
 
 racket_length = 0.480
 
+mode = 0
+
 home_x = 1.0
 home_y = -3.0
 home_z = 0
