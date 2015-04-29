@@ -75,7 +75,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 20.0;
+	MAX_ACCEL = 25.0;
 	dt = 0.02;
 
 	joy_recieved = false;
@@ -109,9 +109,9 @@ Machine::Machine()
 
 void Machine::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 	//ROS_INFO("poseCallback");
-	pthread_mutex_lock( &pose_mutex );
+	//pthread_mutex_lock( &pose_mutex );
 	pose = msg->pose;
-	pthread_mutex_unlock( &pose_mutex );
+	//pthread_mutex_unlock( &pose_mutex );
 }
 
 
@@ -232,7 +232,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 			float diff_y = target_y - pose.position.y;
 
 			float target_deg = std::atan2(diff_y,diff_x) - yaw;
-			float target_speed = std::sqrt( std::pow(diff_x, 2) + std::pow(diff_y, 2) );
+			float target_speed = std::sqrt( std::pow(diff_x, 2) + std::pow(diff_y, 2) ) * 2;
 			if( target_speed > 3 ) target_speed = 3;
 			//ROS_INFO("%.3f %.3f", target_deg, target_speed);
 			calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , target_deg, target_speed );
