@@ -123,7 +123,8 @@ def autoSwingCallback(msg):
         	send.data = [0xff]
     	else:
         	send.data = [0x00]
-        
+        pub.publish( send )
+
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('canMachine')
