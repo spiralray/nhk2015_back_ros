@@ -30,8 +30,8 @@ racket_length = 0.480
 
 mode = 0
 
-home_x = 1.0
-home_y = -3.0
+home_x = 1.7
+home_y = -3.5
 home_z = 0
 
 def publishHome():
@@ -63,7 +63,7 @@ def getTransformMatrixToRacketCoordinate():
     A =  np.mat([
          [1,0,0,0],
          [0,1,0,0.],
-         [0,0,1,-0.75],
+         [0,0,1,-0.80],
          [0,0,0,1]
         ])
     return A*Rt*R
@@ -83,6 +83,10 @@ def predictOrbit(mu):
     msg.point.y = k.mu[1]
     msg.point.z = k.mu[2]
     shuttlePub.publish(msg)
+    
+    if k.mu[4] > 0:
+        #rospy.logwarn('Already recieved')
+        return
     
     if t[2,0] <= -4:
         #rospy.logwarn('Shuttle is under ground') 
@@ -112,7 +116,7 @@ def predictOrbit(mu):
             
             msg = PointStamped()
             msg.header.frame_id = "/map"
-            msg.header.stamp = rospy.Time.now()
+            msg.header.stamp = rospy.Time.now() + rospy.Duration(0.01 * var)
             msg.point.x = k.mu[0]
             msg.point.y = k.mu[1]
             msg.point.z = k.mu[2]
@@ -128,6 +132,8 @@ def predictOrbit(mu):
                 msg.point.y = -6
             
             pointPub.publish(msg)
+            
+            #print msg.header.stamp.to_sec()
             
             return
         k.predict(0.01)
