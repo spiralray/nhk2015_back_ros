@@ -44,8 +44,8 @@ def callback(msg):
                     [0],[0],[0]
                 ]) )
         else:
-            for var in range(0, 10):
-                s.predict(dt/10)
+            for var in range(0, 20):
+                s.predict(dt/20)
             dt = msg.header.stamp.to_sec() - lastmsg.header.stamp.to_sec()
             s.update( np.mat([ [msg.point.x],[msg.point.y],[msg.point.z] ]) )
             #print s.mu.T

@@ -12,7 +12,7 @@ import numpy as np
 import math
 
 class Shuttle:
-    resist_coeff = 0.0008
+    resist_coeff = 0.0007
     gravity = 9.79708
     mass = 0.0052
 
@@ -20,15 +20,15 @@ class Shuttle:
     def __init__(self, mu):
         self.mu = mu
         
-        self.PEst = np.eye(9)
+        self.PEst = np.eye(9)*10
         
-        self.Q = np.diag([0.01,0.01,0.01,1.,1.,1.,1.,1.,1.])*(10**-2)
-        self.R = np.diag([0.05,0.05,0.05])*(10**-1)
+        self.Q = np.diag([0.05,0.05,0.05,0.1,0.1,0.1,1.,1.,1.])*(10**-2)
+        self.R = np.diag([0.05,0.05,0.05])*(10**-1.5)
         
         #To set acceleration
         self.predict(0.00)
         
-        self.PEst = np.eye(9)
+        self.PEst = np.diag([1,1,1,5.,5.,5.,1.,1.,1.])
         
     def getB(self, period):
         return np.mat([
