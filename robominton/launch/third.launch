@@ -20,6 +20,9 @@
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
 
   <node name="manual" pkg="robominton" type="manual" />
+
+  <include file="$(find kondo)/launch/third.launch"/>
+  <node name="kondo_angle" pkg="kondo" type="nhk2015.py" />
   
 
 </launch>
