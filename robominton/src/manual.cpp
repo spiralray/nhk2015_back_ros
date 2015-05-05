@@ -75,8 +75,8 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 25.0;
-	dt = 0.02;
+	MAX_ACCEL = 6.5;
+	dt = 0.05;
 
 	joy_recieved = false;
 	target_recieved = false;
