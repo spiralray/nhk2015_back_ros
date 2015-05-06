@@ -32,6 +32,7 @@ class MyThread(threading.Thread):
         	  		print sentence
         	  		msg = PointStamped()
         	  	 	msg.header.stamp = rospy.Time.from_sec( float(sentence[0]) )
+                    msg.header.frame_id = "map"
         	  	 	msg.point.x = float(sentence[1])
         	  	 	msg.point.y = float(sentence[2])
         	  	 	msg.point.z = float(sentence[3])
