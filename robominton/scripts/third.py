@@ -30,8 +30,8 @@ racket_length = 0.480
 
 mode = 0
 
-home_x = 1.7
-home_y = -3.5
+home_x = 1.3
+home_y = -4.5
 home_z = 0
 
 def publishHome():
