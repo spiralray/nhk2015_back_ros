@@ -7,6 +7,8 @@
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
 
+  <include file="$(find kondo)/launch/ext.launch"/>
+
   <include file="$(find extdev)/launch/extdev.launch"/>
 
 </launch>
