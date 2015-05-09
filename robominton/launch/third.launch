@@ -22,7 +22,9 @@
   <node name="manual" pkg="robominton" type="manual" />
 
   <include file="$(find kondo)/launch/third.launch"/>
-  <node name="kondo_angle" pkg="kondo" type="nhk2015.py" />
+
+  <param name="/servonhk/angle" value="0.8" />
+  <node name="servonhk" pkg="kondo" type="nhk2015.py" />
   
 
 </launch>

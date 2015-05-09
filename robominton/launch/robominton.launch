@@ -8,7 +8,9 @@
   <node name="deadreckoning" pkg="deadreckoning" type="deadreckoning" />
 
   <include file="$(find kondo)/launch/kondo.launch"/>
-  <node name="kondo_nhk" pkg="kondo" type="nhk2015.py" />
+
+  <param name="/servonhk/angle" value="0.5" />
+  <node name="servonhk" pkg="kondo" type="nhk2015.py" />
 
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   <param name="/shuttleFinder/debug" value="false" />
