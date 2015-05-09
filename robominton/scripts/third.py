@@ -109,7 +109,8 @@ def predictOrbit(mu):
         
         if k.mu[2] < -1:
             #rospy.logwarn( 'Shuttle has passed through the racket')
-            break
+            publishHome()
+            return
         
         t=T*p
         if t[2,0] <= 0:
