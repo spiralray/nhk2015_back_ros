@@ -49,7 +49,7 @@ def callback(msg):
     #Encoders for dead reckoning
     elif msg.stdId == 0x330:
         data =  struct.unpack('ii', msg.data )
-        encX.publish( std_msgs.msg.Int32(data[0]) )
+        encX.publish( std_msgs.msg.Int32(-data[0]) )
         encY.publish( std_msgs.msg.Int32(data[1]) )
         
     #Data of R1350N

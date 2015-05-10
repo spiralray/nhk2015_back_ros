@@ -88,7 +88,7 @@ def predictOrbit(mu):
         swingPub.publish( std_msgs.msg.Float32(0) )
         return
     
-    elif t[2,0] <= 0.04:
+    elif t[2,0] <= 0.1:
         #rospy.logwarn('Shuttle is under ground')
         if math.sqrt(t[0,0]**2 + t[1,0]**2) < 2.0:
             swingPub.publish( std_msgs.msg.Float32(1.0) )

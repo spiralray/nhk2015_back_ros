@@ -9,7 +9,7 @@
 
   <include file="$(find kondo)/launch/kondo.launch"/>
 
-  <param name="/servonhk/angle" value="0.5" />
+  <param name="/servonhk/angle" value="0.7" />
   <node name="servonhk" pkg="kondo" type="nhk2015.py" />
 
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
