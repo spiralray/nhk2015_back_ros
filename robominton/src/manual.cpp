@@ -203,7 +203,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float joyy = joy.axes[PS3_AXIS_STICK_LEFT_UPWARDS];
 
 		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
-		if( std::abs(yaw) > M_PI/6 ){
+		if( std::abs(yaw) > M_PI/4 ){
 			std_msgs::Float32 wheel1, wheel2, wheel3;
 			wheel1.data = 0;
 			wheel2.data = 0;
@@ -220,7 +220,8 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float spin;
 		//spin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
-		spin = yaw*2.0;
+		spin = (yaw)*2.0;
+		//spin = (yaw+M_PI/15)*2.0;
 		if( spin > MAX_SPIN ) spin = MAX_SPIN;
 		else if( spin < -MAX_SPIN ) spin = -MAX_SPIN;
 
