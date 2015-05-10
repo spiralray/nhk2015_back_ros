@@ -5,7 +5,7 @@
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   
 
-  <include file="$(find laser2location)/launch/laser.launch"/>
+  <include file="$(find laser2location)/launch/third.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
 
   <include file="$(find canusb)/launch/canusb.launch"/>

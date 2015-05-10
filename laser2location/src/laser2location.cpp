@@ -16,13 +16,14 @@
 int image_size;
 int scale;
 int threshold;
+double dist_lrf;
+bool backward;
 
 #define FIELD_WIDTH 8.420
 
 
-#define DISTANCE_LRF_TO_CENTER	0.455	//[m]
 #define FENCE_WIDTH				0.04	//[m]
-#define FENCE_DEPTH				0
+#define FENCE_DEPTH				8.2
 
 pthread_mutex_t	mutex;  // MUTEX
 sensor_msgs::LaserScan lasermsg;
@@ -87,6 +88,28 @@ int main(int argc, char** argv){
 		return -1;
 	}
 	ROS_INFO("threshold: %d",threshold);
+
+	if (!local_nh.hasParam("dist_lrf")){
+		ROS_ERROR("Parameter dist_lrf is not defined.");
+		return -1;
+	}
+
+	if (!local_nh.getParam("dist_lrf", dist_lrf)){
+		ROS_ERROR("parameter dist_lrf is invalid.");
+		return -1;
+	}
+	ROS_INFO("dist_lrf: %f",dist_lrf);
+
+
+	if (!local_nh.hasParam("backward")){
+		ROS_INFO("Parameter backward is not defined. Now, it is set default value.");
+		local_nh.setParam("backward", false);
+	}
+
+	if (!local_nh.getParam("backward", backward)){
+		ROS_ERROR("parameter backward is invalid.");
+		return -1;
+	}
 
 
 	ros::Subscriber subscriber = n.subscribe("scan", 100, LaserCallback);
@@ -316,13 +339,18 @@ void thread_main(){
 		//double yaw_deg = yaw*180/CV_PI;
 		//ROS_INFO("yaw=%f[deg] x=%f[m] y=%f[m]",yaw_deg, pose.pose.position.x, pose.pose.position.y );
 
-		pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(yaw-M_PI/2);
-		pose.pose.position.y += DISTANCE_LRF_TO_CENTER*sin(yaw-M_PI/2);
+		pose.pose.position.x += dist_lrf*cos(yaw-M_PI/2);
+		pose.pose.position.y += dist_lrf*sin(yaw-M_PI/2);
 
-		pose.pose.position.y += FENCE_WIDTH / 2 + FENCE_DEPTH;
+		pose.pose.position.y += FENCE_WIDTH / 2;
 
-		//pose.pose.position.x += DISTANCE_LRF_TO_CENTER*cos(yaw+M_PI/2);
-		//pose.pose.position.y -= DISTANCE_LRF_TO_CENTER*sin(yaw+M_PI/2);
+		//pose.pose.position.x += dist_lrf*cos(yaw+M_PI/2);
+		//pose.pose.position.y -= dist_lrf*sin(yaw+M_PI/2);
+
+		if( backward ){
+			pose.pose.position.x *= -1;
+			pose.pose.position.y = -(FENCE_DEPTH-FENCE_WIDTH/2) - pose.pose.position.y ;
+		}
 
 		//-------------------------------------------------------------------------------------- Publish
 		if( front!=NULL && (left!=NULL || right!=NULL) ) pose_pub.publish(pose);
