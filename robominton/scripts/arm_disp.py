@@ -48,14 +48,14 @@ def getTransformMatrixToRacketCoordinate():
         ])
     A =  np.mat([
           [1,0,0,0],
-         [0,1,0,-0.222],
-         [0,0,1,-0.670],
+         [0,1,0,-0.220],
+         [0,0,1,-0.6105],
          [0,0,0,1]
         ])
     At =  np.mat([
           [1,0,0,0],
-          [0,math.cos(-math.pi/4),math.sin(-math.pi/4),0],
-          [0,-math.sin(-math.pi/4),math.cos(-math.pi/4),0],
+          [0,math.cos(-math.pi*5/18),math.sin(-math.pi*5/18),0],
+          [0,-math.sin(-math.pi*5/18),math.cos(-math.pi*5/18),0],
           [0,0,0,1]
         ])
     Rev =  np.mat([
