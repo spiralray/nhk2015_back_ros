@@ -86,7 +86,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	pthread_mutex_lock( &mutex );
 	depth_frame = cv_ptr_depth->image;
-	depth_timestamp = ros::Time::now();
+	if( !debug ){
+		depth_timestamp = cv_ptr_depth->header.stamp;
+	}
+	else{
+		depth_timestamp = ros::Time::now();
+	}
 	recieved = true;
 	pthread_mutex_unlock( &mutex );
 
