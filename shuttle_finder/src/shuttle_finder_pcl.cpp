@@ -70,6 +70,8 @@ bool debug = false;
 
 KinectV2 kinect;
 
+double hight_low, hight_high;
+
 void thread_main();
 
 
@@ -183,6 +185,36 @@ int main(int argc, char **argv)
   else{
 	  if (!local_nh.getParam("debug", debug)){
 		  ROS_ERROR("parameter debug is invalid.");
+		  return -1;
+	  }
+  }
+
+  if (!local_nh.hasParam("offset_z")){
+	  kinect.offset_z = 0.0f;
+  }
+  else{
+	  if (!local_nh.getParam("offset_z", kinect.offset_z)){
+		  ROS_ERROR("parameter offset_z is invalid.");
+		  return -1;
+	  }
+  }
+
+  if (!local_nh.hasParam("hight_low")){
+	  hight_low = 2.0f;
+  }
+  else{
+	  if (!local_nh.getParam("hight_low", hight_low)){
+		  ROS_ERROR("parameter hight_low is invalid.");
+		  return -1;
+	  }
+  }
+
+  if (!local_nh.hasParam("hight_high")){
+	  hight_high = 10.0f;
+  }
+  else{
+	  if (!local_nh.getParam("hight_high", hight_high)){
+		  ROS_ERROR("parameter hight_high is invalid.");
 		  return -1;
 	  }
   }
@@ -350,7 +382,7 @@ void thread_main(){
 		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
-		pass.setFilterLimits (2.05, 10);
+		pass.setFilterLimits (hight_low, hight_high);
 		pass.filter (*cloud_global);
 
 		if( cloud_global->points.empty() ) continue;
