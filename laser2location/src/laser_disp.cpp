@@ -19,6 +19,8 @@ ros::Publisher pcl_pub;
 laser_geometry::LaserProjection projector_;
 geometry_msgs::Pose pose;
 
+bool backward;
+
 void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 	pose = msg->pose;
 }
@@ -42,7 +44,8 @@ void getTransformMatrixToGlobalFrame( Eigen::Affine3f &matrix ){
 			0, 0, 1, 0, \
 			0, 0, 0, 1;
 
-	const float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
+	float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
+	if( backward ) yaw += M_PI;
 	const float cos_yaw = cos( -yaw );
 	const float sin_yaw = sin( -yaw );
 
@@ -88,6 +91,16 @@ int main(int argc, char** argv){
 
 	ros::init(argc, argv, "laserdisp");
 	ros::NodeHandle n;
+
+	if (!n.hasParam("/laser2location/backward")){
+		ROS_INFO("Parameter /laser2location/backward is not defined.");
+		return -1;
+	}
+
+	if (!n.getParam("/laser2location/backward", backward)){
+		ROS_ERROR("parameter backward is invalid.");
+		return -1;
+	}
 
 	ros::Subscriber subscriber = n.subscribe("scan", 100, scanCallback);
 	ros::Subscriber subPose = n.subscribe("/robot/pose", 10, poseCallback);
