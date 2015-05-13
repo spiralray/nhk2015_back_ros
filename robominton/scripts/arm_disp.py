@@ -104,7 +104,7 @@ def time_callback(event):
     
     yaw = math.atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z)
     q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+spin, 0)
-    q2 = tf.transformations.quaternion_from_euler(math.pi*5/18, 0, yaw)
+    q2 = tf.transformations.quaternion_from_euler(math.pi*4/18, 0, yaw)
     quaternion = tf.transformations.quaternion_multiply(q2,q1)
     
     marker = Marker ()
@@ -136,7 +136,7 @@ def time_callback(event):
     
     t = np.linalg.solve(T, p)
     q1 = tf.transformations.quaternion_from_euler(0, -math.pi/2+spin_target, 0)
-    q2 = tf.transformations.quaternion_from_euler(math.pi*5/18, 0, yaw)
+    q2 = tf.transformations.quaternion_from_euler(math.pi*4/18, 0, yaw)
     quaternion = tf.transformations.quaternion_multiply(q2,q1)
     
     marker.pose.position.x = t[0,0]
