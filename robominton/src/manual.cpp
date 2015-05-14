@@ -75,7 +75,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 6.5;
+	MAX_ACCEL = 8.0;
 	dt = 0.05;
 
 	joy_recieved = false;
@@ -220,8 +220,8 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float spin;
 		//spin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
-		spin = (yaw)*2.0;
-		//spin = (yaw+M_PI/15)*2.0;
+		//spin = (yaw)*2.0;
+		spin = (yaw+M_PI/15)*2.0;
 		if( spin > MAX_SPIN ) spin = MAX_SPIN;
 		else if( spin < -MAX_SPIN ) spin = -MAX_SPIN;
 
