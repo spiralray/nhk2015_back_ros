@@ -55,9 +55,9 @@ def getTransformMatrixToRacketCoordinate():
     #print yaw
     
     Rt = np.mat([
-          [math.cos(-yaw),0,math.sin(-yaw),0],
-          [0,1,0,0],
-          [-math.sin(-yaw),0,math.cos(-yaw),0],
+          [math.cos(-yaw),math.sin(-yaw),0,0],
+          [-math.sin(-yaw),math.cos(-yaw),0,0],
+          [0,0,1,0],
           [0,0,0,1]
         ])
     A =  np.mat([
