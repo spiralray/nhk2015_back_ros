@@ -86,6 +86,7 @@ def predictOrbit(mu):
     
     if k.mu[4] > 0:
         #rospy.logwarn('Already recieved')
+        publishHome()
         return
     
     if t[2,0] <= -4:
