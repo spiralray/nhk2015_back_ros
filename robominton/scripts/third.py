@@ -63,7 +63,7 @@ def getTransformMatrixToRacketCoordinate():
     A =  np.mat([
          [1,0,0,0],
          [0,1,0,0.],
-         [0,0,1,-0.80],
+         [0,0,1,-0.75],
          [0,0,0,1]
         ])
     return A*Rt*R

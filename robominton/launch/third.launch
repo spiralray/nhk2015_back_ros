@@ -8,7 +8,7 @@
   <include file="$(find laser2location)/launch/third.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
 
-  <include file="$(find canusb)/launch/canusb.launch"/>
+  <include file="$(find canusb)/launch/third.launch"/>
   <node name="canusb_third" pkg="canusb" type="nhk2015_third.py" />
 
   <param name="/shuttleFinder/debug" value="true" />
