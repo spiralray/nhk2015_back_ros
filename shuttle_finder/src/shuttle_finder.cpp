@@ -112,38 +112,49 @@ void servoCallback(const std_msgs::Float32::ConstPtr& msg){
 	kinect.setKinectRad(msg->data);
 }
 
-PCSize max_min(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)//点群の各XYZ方向の最大値と最小値を求める
-{
-    double min_x, min_y, min_z, max_x, max_y, max_z;
-    PCSize size;
-    min_x = 10000;
-    min_y = 10000;
-    min_z = 100000;
-    max_x = -10000;
-    max_y = -10000;
-    max_z = -10000;
+bool searchShuttle( pcl::PointCloud<pcl::PointXYZ>::Ptr cloud , geometry_msgs::PointStamped &shuttle ){
 
-    for(unsigned int i = 0; i < cloud->points.size(); i++)
-    {
-        if(max_x < cloud->points[i].x)
-            max_x = cloud->points[i].x;
-        if(max_y < cloud->points[i].y)
-            max_y = cloud->points[i].y;
-        if(max_z < cloud->points[i].z)
-            max_z = cloud->points[i].z;
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+	tree->setInputCloud (cloud);
+	std::vector<pcl::PointIndices> cluster_indices;
+	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
 
-        if(min_x > cloud->points[i].x)
-            min_x = cloud->points[i].x;
-        if(min_y > cloud->points[i].y)
-            min_y = cloud->points[i].y;
-        if(min_z > cloud->points[i].z)
-            min_z = cloud->points[i].z;
-    }
+	ec.setClusterTolerance (0.2);
 
-    size.length = abs(max_x - min_x);
-    size.width = abs(max_y - min_y);
-    size.height = abs(max_z - min_y);
-    return size;
+	ec.setMinClusterSize (10);
+	ec.setMaxClusterSize (150);
+	ec.setSearchMethod (tree);
+	ec.setInputCloud (cloud);
+	ec.extract (cluster_indices);
+
+
+	int count;
+	double gx,gy,gz;
+
+	//for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end(); ++it){
+	std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin ();
+	if( it == cluster_indices.end() ) return false;
+
+	count = 0;
+	gx = gy = gz = 0.0;
+
+	for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++) {
+
+		gx += cloud->points[*pit].x;
+		gy += cloud->points[*pit].y;
+		gz += cloud->points[*pit].z;
+		count++;
+	}
+
+	gx = gx/count;
+	gy = gy/count;
+	gz = gz/count;
+
+	shuttle.point.x = gx;
+	shuttle.point.y = gy;
+	shuttle.point.z = gz;
+
+	return true;
 }
 
 
@@ -384,6 +395,9 @@ void thread_main(){
 			pcl_pub.publish(cloudmsg);
 		}
 
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_my_field (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::copyPointCloud<pcl::PointXYZ>(*cloud_global, *cloud_my_field);
+
 		if( cloud_global->points.empty() ) continue;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
@@ -393,51 +407,27 @@ void thread_main(){
 		if( cloud_global->points.empty() ) continue;
 		//ROS_ERROR("%d", cloud_global->points.size());
 
-		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-		tree->setInputCloud (cloud_global);
-
-		std::vector<pcl::PointIndices> cluster_indices;
-		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-
-		ec.setClusterTolerance (0.2);
-
-		ec.setMinClusterSize (10);
-		ec.setMaxClusterSize (150);
-		ec.setSearchMethod (tree);
-		ec.setInputCloud (cloud_global);
-		ec.extract (cluster_indices);
-
-
-		int count;
-		double gx,gy,gz;
-
-		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-		{
-
-			count = 0;
-			gx = gy = gz = 0.0;
-
-			for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++) {
-
-				//ROS_ERROR( "%.3f %.3f %.3f", cloud_global->points[*pit].x, cloud_global->points[*pit].y, cloud_global->points[*pit].z );
-				gx += cloud_global->points[*pit].x;
-				gy += cloud_global->points[*pit].y;
-				gz += cloud_global->points[*pit].z;
-				count++;
-			}
-
-			gx = gx/count;
-			gy = gy/count;
-			gz = gz/count;
-
-			shuttle.point.x = gx;
-			shuttle.point.y = gy;
-			shuttle.point.z = gz;
-
+		bool shuttle_found = searchShuttle(cloud_global, shuttle);
+		if( shuttle_found ){
 			shuttle_pub.publish(shuttle);
-			//ROS_ERROR( "%.3lf %.3lf %.3lf", gx, gy, gz );
 		}
+		else{
 
+			pass.setInputCloud (cloud_my_field);
+			pass.setFilterFieldName ("y");
+			pass.setFilterLimits (-6, -0.3);
+			pass.filter (*cloud_my_field);
+
+			pass.setInputCloud (cloud_my_field);
+			pass.setFilterFieldName ("z");
+			pass.setFilterLimits (1.2, hight_low+0.1);
+			pass.filter (*cloud_my_field);
+
+			shuttle_found = searchShuttle(cloud_my_field, shuttle);
+			if( shuttle_found ){
+				shuttle_pub.publish(shuttle);
+			}
+		}
 
 	}
 }
