@@ -13,8 +13,8 @@
   <node name="servonhk" pkg="kondo" type="nhk2015.py" />
 
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
-  <param name="/shuttleFinder/debug" value="false" />
-  <include file="$(find shuttle_finder)/launch/shuttle_finder_pcl.launch"/>
+  <param name="/shuttle_finder/debug" value="false" />
+  <include file="$(find shuttle_finder)/launch/shuttle_finder.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
   

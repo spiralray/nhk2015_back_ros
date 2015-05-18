@@ -123,8 +123,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-#add_executable(shuttle_finder src/shuttle_finder.cpp)
-add_executable(shuttle_finder_pcl src/shuttle_finder_pcl.cpp)
+add_executable(shuttle_finder src/shuttle_finder.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -132,12 +131,6 @@ add_executable(shuttle_finder_pcl src/shuttle_finder_pcl.cpp)
 
 ## Specify libraries to link a library or executable target against
  target_link_libraries(shuttle_finder
-   ${catkin_LIBRARIES}
-   ${OpenCV_INCLUDE_DIR}
-   cvblob
- )
- 
- target_link_libraries(shuttle_finder_pcl
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
    ${PCL_LIBRARIES}

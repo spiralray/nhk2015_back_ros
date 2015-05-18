@@ -1,6 +1,6 @@
 <launch>
-  <param name="/shuttleFinder/offset_x" value="0.05" />
-  <param name="/shuttleFinder/offset_y" value="-0.01" />
-  <param name="/shuttleFinder/offset_z" value="1.6215" />
-  <node name="shuttleFinder" pkg="shuttle_finder" type="shuttle_finder_pcl" />
+  <param name="/shuttle_finder/offset_x" value="0.05" />
+  <param name="/shuttle_finder/offset_y" value="-0.01" />
+  <param name="/shuttle_finder/offset_z" value="1.6215" />
+  <node name="shuttle_finder" pkg="shuttle_finder" type="shuttle_finder" />
 </launch>

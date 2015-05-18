@@ -5,7 +5,7 @@
 
   <node name="canusb_third" pkg="canusb" type="nhk2015_third.py" />
 
-  <param name="/shuttleFinder/debug" value="true" />
+  <param name="/shuttle_finder/debug" value="true" />
   <include file="$(find shuttle_finder)/launch/third.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />

@@ -1,7 +1,7 @@
 <launch>
 
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
-  <param name="/shuttleFinder/debug" value="true" />
+  <param name="/shuttle_finder/debug" value="true" />
   <include file="$(find shuttle_finder)/launch/pclext.launch"/>
   
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
