@@ -123,7 +123,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(shuttle_finder src/shuttle_finder.cpp)
+#add_executable(shuttle_finder src/shuttle_finder.cpp)
 add_executable(shuttle_finder_pcl src/shuttle_finder_pcl.cpp)
 
 ## Add cmake target dependencies of the executable/library
