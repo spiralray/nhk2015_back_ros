@@ -291,6 +291,8 @@ void thread_main(){
 
 	while(!endflag){
 
+		bool shuttle_found = false;
+
 		//wait for recieve new frame
 		while(recieved == false){
 			ros::Duration(0.001).sleep();
@@ -386,7 +388,7 @@ void thread_main(){
 		pass.setFilterFieldName ("x");
 		pass.setFilterLimits (-3.5, 3.5);
 		pass.filter (*cloud_global);
-
+#if 1
 		if( debug ){
 			sensor_msgs::PointCloud2 cloudmsg;
 			pcl::toROSMsg (*cloud_global, cloudmsg);
@@ -394,40 +396,43 @@ void thread_main(){
 			cloudmsg.header.frame_id = "map";
 			pcl_pub.publish(cloudmsg);
 		}
-
+#endif
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_my_field (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::copyPointCloud<pcl::PointXYZ>(*cloud_global, *cloud_my_field);
 
-		if( cloud_global->points.empty() ) continue;
+		if( cloud_global->points.empty() ) goto search_my_field;
 		pass.setInputCloud (cloud_global);
 		pass.setFilterFieldName ("z");
 		pass.setFilterLimits (hight_low, hight_high);
 		pass.filter (*cloud_global);
 
-		if( cloud_global->points.empty() ) continue;
+		if( cloud_global->points.empty() ) goto search_my_field;
 		//ROS_ERROR("%d", cloud_global->points.size());
 
-		bool shuttle_found = searchShuttle(cloud_global, shuttle);
+		shuttle_found = searchShuttle(cloud_global, shuttle);
+		if( shuttle_found ){
+			shuttle_pub.publish(shuttle);
+			continue;
+		}
+
+		search_my_field:
+
+		pass.setInputCloud (cloud_my_field);
+		pass.setFilterFieldName ("y");
+		pass.setFilterLimits (-6, -0.3);
+		pass.filter (*cloud_my_field);
+
+		pass.setInputCloud (cloud_my_field);
+		pass.setFilterFieldName ("z");
+		pass.setFilterLimits (1.2, hight_low+0.1);
+		pass.filter (*cloud_my_field);
+
+		if( cloud_my_field->points.empty() ) continue;
+		shuttle_found = searchShuttle(cloud_my_field, shuttle);
 		if( shuttle_found ){
 			shuttle_pub.publish(shuttle);
 		}
-		else{
 
-			pass.setInputCloud (cloud_my_field);
-			pass.setFilterFieldName ("y");
-			pass.setFilterLimits (-6, -0.3);
-			pass.filter (*cloud_my_field);
-
-			pass.setInputCloud (cloud_my_field);
-			pass.setFilterFieldName ("z");
-			pass.setFilterLimits (1.2, hight_low+0.1);
-			pass.filter (*cloud_my_field);
-
-			shuttle_found = searchShuttle(cloud_my_field, shuttle);
-			if( shuttle_found ){
-				shuttle_pub.publish(shuttle);
-			}
-		}
 
 	}
 }
