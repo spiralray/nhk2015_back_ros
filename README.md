@@ -3,7 +3,7 @@ NHK2015 ROS programs for back players
 
 # ロボットの動かし方
 
-##PCの接続
+## PCの接続
 グラナイトにG-Tune、Jr.にAlienwareを搭載する。
 搭載後、各USBをPCに接続する。
 
