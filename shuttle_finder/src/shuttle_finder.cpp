@@ -424,7 +424,7 @@ void thread_main(){
 
 		pass.setInputCloud (cloud_my_field);
 		pass.setFilterFieldName ("z");
-		pass.setFilterLimits (1.2, hight_low+0.1);
+		pass.setFilterLimits (1.3, hight_low+0.1);
 		pass.filter (*cloud_my_field);
 
 		if( cloud_my_field->points.empty() ) continue;
