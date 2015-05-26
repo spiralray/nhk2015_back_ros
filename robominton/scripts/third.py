@@ -30,8 +30,8 @@ racket_length = 0.480
 
 mode = 0
 
-home_x = 1.3
-home_y = -4.5
+home_x = 0.9
+home_y = -3.5
 home_z = 0
 
 def publishHome():
@@ -62,8 +62,8 @@ def getTransformMatrixToRacketCoordinate():
         ])
     A =  np.mat([
          [1,0,0,0],
-         [0,1,0,0.],
-         [0,0,1,-0.75],
+         [0,1,0,0.6],
+         [0,0,1,-0.9],
          [0,0,0,1]
         ])
     return A*Rt*R

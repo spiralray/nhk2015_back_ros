@@ -11,7 +11,7 @@
   <include file="$(find canusb)/launch/third.launch"/>
   <node name="canusb_third" pkg="canusb" type="nhk2015_third.py" />
 
-  <param name="/shuttle_finder/debug" value="true" />
+  <param name="/shuttle_finder/debug" value="false" />
   <include file="$(find shuttle_finder)/launch/third.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
@@ -23,7 +23,7 @@
 
   <include file="$(find kondo)/launch/third.launch"/>
 
-  <param name="/servonhk/angle" value="0.8" />
+  <param name="/servonhk/angle" value="1.0" />
   <node name="servonhk" pkg="kondo" type="nhk2015.py" />
   
 
