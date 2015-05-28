@@ -27,6 +27,10 @@ from visualization_msgs.msg import Marker
 import math
 
 racket_length = 0.480
+slide_limit = 0.24
+
+min_hight = 0.6105 - racket_length * math.cos(-math.pi*5/18)-0.03
+max_hight = 0.6105 + racket_length * math.cos(-math.pi*5/18)+0.03
 
 def getTransformMatrixToRacketCoordinate():
     R = np.mat([
@@ -81,17 +85,26 @@ def predictOrbit(mu):
     msg.point.z = k.mu[2]
     shuttlePub.publish(msg)
     
-    if t[2,0] <= -4:
+    if (t[2,0] <= -4 and k.mu[2] <= max_hight) or k.mu[4] > 0:
         #rospy.logwarn('Shuttle is under ground') 
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
         swingPub.publish( std_msgs.msg.Float32(0) )
         return
     
-    elif t[2,0] <= 0.1:
+    elif t[2,0] <= 0.1 and k.mu[2] <= max_hight:
         #rospy.logwarn('Shuttle is under ground')
         if math.sqrt(t[0,0]**2 + t[1,0]**2) < 2.0:
             swingPub.publish( std_msgs.msg.Float32(1.0) )
+        return
+    
+    elif k.mu[2] < min_hight:
+        return
+    
+    elif k.mu[2] < min_hight-1.5:
+        roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
+        slide_pub.publish( std_msgs.msg.Float32(0) )
+        swingPub.publish( std_msgs.msg.Float32(0) )
         return
     
     #print t.T
@@ -100,13 +113,21 @@ def predictOrbit(mu):
     
     for var in range(0, 200):
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
+        t=T*p
         
-        if k.mu[2] < -1:
+        if k.mu[2] < min_hight:
             #rospy.logwarn( 'Shuttle has passed through the racket')
+            
+            msg = PointStamped()
+            msg.header.frame_id = "/map"
+            msg.header.stamp = rospy.Time.now()
+            msg.point.x = k.mu[0]
+            msg.point.y = k.mu[1]
+            msg.point.z = k.mu[2]
+            pointPub.publish(msg)
             break
         
-        t=T*p
-        if t[2,0] <= 0:
+        if t[2,0] <= 0 and k.mu[2] <= max_hight and k.mu[2] >= min_hight:
             
             msg = PointStamped()
             msg.header.frame_id = "/map"
@@ -135,10 +156,10 @@ def predictOrbit(mu):
             slide_x = t[0,0] - racket_x
             
                 
-            if slide_x > 0.24:
-                slide_x = 0.24
-            elif slide_x < -0.24:
-                slide_x = -0.24
+            if slide_x > slide_limit:
+                slide_x = slide_limit
+            elif slide_x < -slide_limit:
+                slide_x = -slide_limit
                 
             while racket_spin - roll > math.pi:
                 racket_spin -= 2*math.pi
@@ -159,6 +180,7 @@ def predictOrbit(mu):
                 roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
                 
             return
+        
         k.predict(0.01)
         
     roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
@@ -206,7 +228,7 @@ def time_callback(event):
     for var in range(0, 4):
         s.predict(t/4)
     
-    if swing < -3000 and swing_power==0:
+    if swing < -3000 and swing_power<=0:
         wait_flag = True
     elif swing > -300:
         wait_flag = False
@@ -215,6 +237,7 @@ def time_callback(event):
         rospy.loginfo("racket is returning to home position")
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
+        swingPub.publish( std_msgs.msg.Float32(0) )
         
     elif mode == 1:
         roll_target = -2.43
