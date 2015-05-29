@@ -98,9 +98,6 @@ def predictOrbit(mu):
             swingPub.publish( std_msgs.msg.Float32(1.0) )
         return
     
-    elif k.mu[2] < min_hight:
-        return
-    
     elif k.mu[2] < min_hight-1.5:
         roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
         slide_pub.publish( std_msgs.msg.Float32(0) )
@@ -115,19 +112,7 @@ def predictOrbit(mu):
         p = np.mat( [[k.mu[0]],[k.mu[1]],[k.mu[2]], [1] ] )
         t=T*p
         
-        if k.mu[2] < min_hight:
-            #rospy.logwarn( 'Shuttle has passed through the racket')
-            
-            msg = PointStamped()
-            msg.header.frame_id = "/map"
-            msg.header.stamp = rospy.Time.now()
-            msg.point.x = k.mu[0]
-            msg.point.y = k.mu[1]
-            msg.point.z = k.mu[2]
-            pointPub.publish(msg)
-            break
-        
-        if t[2,0] <= 0 and k.mu[2] <= max_hight and k.mu[2] >= min_hight:
+        if (t[2,0] <= 0 and k.mu[2] <= max_hight and k.mu[2] >= min_hight) or k.mu[2] < min_hight:
             
             msg = PointStamped()
             msg.header.frame_id = "/map"
