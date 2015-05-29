@@ -137,10 +137,7 @@ def predictOrbit(mu):
             msg.point.z = k.mu[2]
             pointPub.publish(msg)
             
-            if math.sqrt(t[0,0]**2 + t[1,0]**2) > 5.0:
-                roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
-                slide_pub.publish( std_msgs.msg.Float32(0) )
-                return
+            
             
             y = t[1,0]/racket_length
             if y > 1:
@@ -168,9 +165,38 @@ def predictOrbit(mu):
                 racket_spin += 2*math.pi
                 
             
+            u = slide_x + racket_x
+            v = y*racket_length
             
-            #rospy.logerr("%d", var)
+            rp = np.mat( [[u],[v],[0], [1] ] )
+            racket_p = np.linalg.solve(T, rp)
             
+            msg = PointStamped()
+            msg.header.frame_id = "/map"
+            msg.header.stamp = rospy.Time.now() + rospy.Duration(0.01 * var)
+            msg.point.x = pose.position.x + p[0] - racket_p[0]
+            msg.point.y = pose.position.y + p[1] - racket_p[1]
+            msg.point.z = 0
+            
+            if msg.point.x > 3:
+                msg.point.x = 3
+            elif msg.point.x < -3:
+                msg.point.x = -3
+                
+            if msg.point.y > -1:
+                msg.point.y = -1
+            elif msg.point.y < -6:
+                msg.point.y = -6
+            
+            targetpointPub.publish(msg)
+            
+            
+            
+            if math.sqrt(t[0,0]**2 + t[1,0]**2) > 5.0:
+                roll_pub.publish( std_msgs.msg.Float32(-math.pi) )
+                slide_pub.publish( std_msgs.msg.Float32(0) )
+                return
+                
             if var < 50:
                 slide_pub.publish( std_msgs.msg.Float32(slide_x) )
                 roll_pub.publish( std_msgs.msg.Float32(racket_spin) )
@@ -285,6 +311,7 @@ if __name__ == '__main__':
     pointPub = rospy.Publisher('/shuttle/hit', PointStamped, queue_size=1)
     shuttlePub = rospy.Publisher('/shuttle/now', PointStamped, queue_size=1)
     swingPub = rospy.Publisher('/auto/swing', std_msgs.msg.Float32, queue_size=1)
+    targetpointPub = rospy.Publisher('/robot/targetpoint', PointStamped, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.02), time_callback)
     
