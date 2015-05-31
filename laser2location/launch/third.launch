@@ -2,9 +2,8 @@
   <param name="/laser2location/image_size" value="1500" />
   <param name="/laser2location/scale" value="40" />
   <param name="/laser2location/threshold" value="50" />
-  <param name="/laser2location/dist_lrf" value="0.1995" />
-  <param name="/laser2location/backward" value="true" />
-
+  <param name="/laser2location/dist_lrf" value="0.455" />
+  <param name="/laser2location/backward" value="false" />
   <node name="laser2location" pkg="laser2location" type="laser2location" />
 
 </launch>

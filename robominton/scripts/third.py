@@ -30,8 +30,8 @@ racket_length = 0.480
 
 mode = 0
 
-home_x = 1.3
-home_y = -4.5
+home_x = 0.9
+home_y = -3.5
 home_z = 0
 
 def publishHome():
@@ -55,15 +55,15 @@ def getTransformMatrixToRacketCoordinate():
     #print yaw
     
     Rt = np.mat([
-          [math.cos(-yaw),0,math.sin(-yaw),0],
-          [0,1,0,0],
-          [-math.sin(-yaw),0,math.cos(-yaw),0],
+          [math.cos(-yaw),math.sin(-yaw),0,0],
+          [-math.sin(-yaw),math.cos(-yaw),0,0],
+          [0,0,1,0],
           [0,0,0,1]
         ])
     A =  np.mat([
          [1,0,0,0],
-         [0,1,0,0.],
-         [0,0,1,-0.80],
+         [0,1,0,0.6],
+         [0,0,1,-0.9],
          [0,0,0,1]
         ])
     return A*Rt*R
@@ -86,6 +86,7 @@ def predictOrbit(mu):
     
     if k.mu[4] > 0:
         #rospy.logwarn('Already recieved')
+        publishHome()
         return
     
     if t[2,0] <= -4:
@@ -109,7 +110,8 @@ def predictOrbit(mu):
         
         if k.mu[2] < -1:
             #rospy.logwarn( 'Shuttle has passed through the racket')
-            break
+            publishHome()
+            return
         
         t=T*p
         if t[2,0] <= 0:

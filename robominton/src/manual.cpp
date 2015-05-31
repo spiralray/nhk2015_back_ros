@@ -64,6 +64,7 @@ private:
 
 	bool target_recieved;
 	float target_x, target_y;
+	float target_yaw;
 
 	float dt;
 	float MAX_ACCEL;
@@ -75,7 +76,7 @@ private:
 
 Machine::Machine()
 {
-	MAX_ACCEL = 6.5;
+	MAX_ACCEL = 8.0;
 	dt = 0.05;
 
 	joy_recieved = false;
@@ -104,6 +105,7 @@ Machine::Machine()
 	targetPoint_sub = nh.subscribe("/robot/targetpoint", 1, &Machine::targetpointCallback, this);
 
 	target_speed[0] = target_speed[1] = target_speed[2] = 0.0f;
+	target_yaw = 0.0f;
 
 }
 
@@ -203,7 +205,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		float joyy = joy.axes[PS3_AXIS_STICK_LEFT_UPWARDS];
 
 		float yaw = -atan2(2.0*(pose.orientation.x*pose.orientation.y + pose.orientation.w*pose.orientation.z), pose.orientation.w*pose.orientation.w + pose.orientation.x*pose.orientation.x - pose.orientation.y*pose.orientation.y - pose.orientation.z*pose.orientation.z);
-		if( std::abs(yaw) > M_PI/6 ){
+		if( std::abs(yaw) > M_PI/4 ){
 			std_msgs::Float32 wheel1, wheel2, wheel3;
 			wheel1.data = 0;
 			wheel2.data = 0;
@@ -218,11 +220,19 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 #define MAX_SPIN 0.3
 
 		float spin;
-		//spin = ((-joy.axes[PS3_AXIS_BUTTON_REAR_LEFT_1]) - (-joy.axes[PS3_AXIS_BUTTON_REAR_RIGHT_1]))/2;
 
-		spin = yaw*2.0;
+		if( joy.buttons[PS3_BUTTON_REAR_LEFT_1] || mode.data == 1 ){
+			//If service or serve-recieve
+			target_yaw = M_PI/15;
+		}
+		else{
+			target_yaw = 0.0f;
+		}
+
+		spin = (yaw+target_yaw)*2.0;
 		if( spin > MAX_SPIN ) spin = MAX_SPIN;
 		else if( spin < -MAX_SPIN ) spin = -MAX_SPIN;
+		else if( spin < 0.017) spin = 0;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));

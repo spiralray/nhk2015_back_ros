@@ -5,13 +5,13 @@
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   
 
-  <include file="$(find laser2location)/launch/laser.launch"/>
+  <include file="$(find laser2location)/launch/third.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
 
-  <include file="$(find canusb)/launch/canusb.launch"/>
+  <include file="$(find canusb)/launch/third.launch"/>
   <node name="canusb_third" pkg="canusb" type="nhk2015_third.py" />
 
-  <param name="/shuttleFinder/debug" value="true" />
+  <param name="/shuttle_finder/debug" value="false" />
   <include file="$(find shuttle_finder)/launch/third.launch"/>
   <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
@@ -22,7 +22,9 @@
   <node name="manual" pkg="robominton" type="manual" />
 
   <include file="$(find kondo)/launch/third.launch"/>
-  <node name="kondo_angle" pkg="kondo" type="nhk2015.py" />
+
+  <param name="/servonhk/angle" value="1.0" />
+  <node name="servonhk" pkg="kondo" type="nhk2015.py" />
   
 
 </launch>

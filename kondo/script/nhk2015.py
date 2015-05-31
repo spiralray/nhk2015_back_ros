@@ -23,13 +23,29 @@ import threading
 import math
 
 def callback(msg):
-    kinect.publish( std_msgs.msg.Float32(msg.angle - 144*(0.000383495*6/5) ) )
-    
+    kinect.publish( std_msgs.msg.Float32(-msg.angle ) )
+
+def targetCallback(msg):
+    pubmsg = servo()
+    pubmsg.id = 1
+    pubmsg.angle = -msg.data
+    s.publish( pubmsg )
+
+def timer_callback(msg):
+    pubmsg = servo()
+    pubmsg.id = 1
+    pubmsg.angle = -rospy.get_param('~angle')
+    s.publish( pubmsg )
+
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('servonhk')
     
     kinect = rospy.Publisher('/kinect/angle', std_msgs.msg.Float32, queue_size=1)
+    #rospy.Subscriber("/kinect/targetangle", std_msgs.msg.Float32, targetCallback)
     rospy.Subscriber("/servo/rx", servo, callback)
+    s = rospy.Publisher('/servo/tx', servo, queue_size=1)
+
+    rospy.Timer(rospy.Duration(0.1), timer_callback)
     rospy.spin()
     
