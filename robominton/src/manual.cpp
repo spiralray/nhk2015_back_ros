@@ -63,6 +63,7 @@ private:
 	float encoder[3];
 
 	bool target_recieved;
+	double target_time;
 	float target_x, target_y;
 	float target_yaw;
 
@@ -107,6 +108,8 @@ Machine::Machine()
 	target_speed[0] = target_speed[1] = target_speed[2] = 0.0f;
 	target_yaw = 0.0f;
 
+	target_time = 0;
+
 }
 
 void Machine::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
@@ -139,6 +142,7 @@ void Machine::enc3Callback(const std_msgs::Float32::ConstPtr& msg){
 
 void Machine::targetpointCallback(const geometry_msgs::PointStamped::ConstPtr& msg){
 	target_recieved = true;
+	target_time = msg->header.stamp.toSec();
 	target_x = msg->point.x;
 	target_y = msg->point.y;
 }
@@ -232,18 +236,27 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		spin = (yaw+target_yaw)*2.0;
 		if( spin > MAX_SPIN ) spin = MAX_SPIN;
 		else if( spin < -MAX_SPIN ) spin = -MAX_SPIN;
-		else if( spin < 0.017) spin = 0;
+		else if( spin < 0.005) spin = 0;
 
 		float joyrad = atan2(joyy, joyx);
 		float joyslope = sqrt( pow(joyx, 2) + pow(joyy, 2));
 
-		if( target_recieved && joy.buttons[PS3_BUTTON_ACTION_CROSS] ){	//Automatic Mode
+		double time_lasts = target_time - ros::Time::now().toSec();
+
+		if( target_recieved && joy.buttons[PS3_BUTTON_ACTION_CIRCLE] && time_lasts > -1.0 ){	//Automatic Mode
 			float diff_x = target_x - pose.position.x;
 			float diff_y = target_y - pose.position.y;
 
 			float target_deg = std::atan2(diff_y,diff_x) - yaw;
 			float target_speed = std::sqrt( std::pow(diff_x, 2) + std::pow(diff_y, 2) ) * 2;
 			if( target_speed > 3 ) target_speed = 3;
+			//else if( target_speed > 0.05 && target_speed < 0.2 ) target_speed = 0.2;
+
+			if( time_lasts > 0){
+				float min_speed = sqrt( pow(diff_x,2) + pow(diff_y,2) ) / time_lasts;
+				if( min_speed > target_speed ) target_speed = min_speed;
+			}
+
 			//ROS_INFO("%.3f %.3f", target_deg, target_speed);
 			calcOmniWheel( event.current_real.toSec() - event.last_real.toSec() , target_deg, target_speed );
 		}
