@@ -84,6 +84,11 @@ def predictOrbit(mu):
     msg.point.z = k.mu[2]
     shuttlePub.publish(msg)
     
+    if t[0,0] > 0:
+        rightPub.publish( std_msgs.msg.Bool(True) )
+    else:
+        rightPub.publish( std_msgs.msg.Bool(False) )
+    
     if k.mu[4] > 0:
         #rospy.logwarn('Already recieved')
         publishHome()
@@ -184,6 +189,7 @@ if __name__ == '__main__':
     pointPub = rospy.Publisher('/robot/targetpoint', PointStamped, queue_size=1)
     shuttlePub = rospy.Publisher('/shuttle/now', PointStamped, queue_size=1)
     swingPub = rospy.Publisher('/auto/swing', std_msgs.msg.Float32, queue_size=1)
+    rightPub = rospy.Publisher('/auto/isright', std_msgs.msg.Bool, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.02), time_callback)
     
