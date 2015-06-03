@@ -259,7 +259,7 @@ def time_callback(event):
             servearm_pub.publish( std_msgs.msg.Float32(0.29) )
         
     else:
-        servearm_pub.publish( std_msgs.msg.Float32(0.01) )
+        servearm_pub.publish( std_msgs.msg.Float32(0.005) )
         predictOrbit(copy.copy(s.mu))
     
 if __name__ == '__main__':
