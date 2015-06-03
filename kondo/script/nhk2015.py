@@ -25,6 +25,10 @@ import math
 def callback(msg):
     kinect.publish( std_msgs.msg.Float32(-msg.angle ) )
 
+def highCallback(msg):
+    global high
+    high = msg.data
+
 def targetCallback(msg):
     pubmsg = servo()
     pubmsg.id = 1
@@ -34,7 +38,10 @@ def targetCallback(msg):
 def timer_callback(msg):
     pubmsg = servo()
     pubmsg.id = 1
-    pubmsg.angle = -rospy.get_param('~angle')
+    if high == True:
+        pubmsg.angle = -rospy.get_param('~angle')-0.4
+    else:
+        pubmsg.angle = -rospy.get_param('~angle')
     s.publish( pubmsg )
 
 if __name__ == '__main__':
@@ -44,8 +51,11 @@ if __name__ == '__main__':
     kinect = rospy.Publisher('/kinect/angle', std_msgs.msg.Float32, queue_size=1)
     #rospy.Subscriber("/kinect/targetangle", std_msgs.msg.Float32, targetCallback)
     rospy.Subscriber("/servo/rx", servo, callback)
+    
+    high=False
+    rospy.Subscriber("/kinect/high", std_msgs.msg.Bool, highCallback)
     s = rospy.Publisher('/servo/tx', servo, queue_size=1)
 
-    rospy.Timer(rospy.Duration(0.1), timer_callback)
+    rospy.Timer(rospy.Duration(0.03), timer_callback)
     rospy.spin()
     

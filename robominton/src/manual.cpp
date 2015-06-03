@@ -3,6 +3,7 @@
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Byte.h>
+#include <std_msgs/Bool.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
@@ -47,6 +48,8 @@ private:
 	ros::Publisher motor1_pub;
 	ros::Publisher motor2_pub;
 	ros::Publisher motor3_pub;
+
+	ros::Publisher kinectHigh_pub;
 
 	ros::Publisher mode_pub;
 
@@ -101,6 +104,8 @@ Machine::Machine()
 	motor2_pub = nh.advertise<std_msgs::Float32>("/omni/motor2", 1);
 	motor3_pub = nh.advertise<std_msgs::Float32>("/omni/motor3", 1);
 
+	kinectHigh_pub = nh.advertise<std_msgs::Bool>("/kinect/high", 1);
+
 	mode_pub = nh.advertise<std_msgs::Int32>("/robot/mode", 1);
 
 	targetPoint_sub = nh.subscribe("/robot/targetpoint", 1, &Machine::targetpointCallback, this);
@@ -151,6 +156,17 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 
 	if( !joy_recieved ) return;
 
+	if( joy.buttons[PS3_BUTTON_REAR_RIGHT_1] ){
+		std_msgs::Bool high;
+		high.data = true;
+		kinectHigh_pub.publish(high);
+	}
+	else{
+		std_msgs::Bool high;
+		high.data = false;
+		kinectHigh_pub.publish(high);
+	}
+
 	if( joy.buttons[PS3_BUTTON_SELECT] && mode.data != 1 ){
 		mode.data = 1;
 		mode_pub.publish(mode);
@@ -159,7 +175,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		air.data = 0;
 		air_pub.publish(air);
 	}
-	if( joy.buttons[PS3_BUTTON_START] && mode.data == 1 ){
+	if( (joy.buttons[PS3_BUTTON_START] || joy.buttons[PS3_BUTTON_PAIRING] ) && mode.data == 1 ){
 
 		std_msgs::Float32 wheel1, wheel2, wheel3;
 		wheel1.data = 0.0f;
@@ -176,13 +192,16 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 		air.data = 1;
 		air_pub.publish(air);
 
-		ros::Duration(0.18).sleep();
+		if( joy.buttons[PS3_BUTTON_PAIRING] )	ros::Duration(0.228).sleep();
+		else									ros::Duration(0.18).sleep();
+
 
 		mode.data = 0;
 		mode_pub.publish(mode);
 
 		std_msgs::Float32 swing;
-		swing.data = 1.0f;
+		if( joy.buttons[PS3_BUTTON_PAIRING] )	swing.data = 0.85f;
+		else									swing.data = 0.9f;
 		swing_pub.publish(swing);
 
 		ros::Duration(0.3).sleep();
@@ -243,7 +262,7 @@ void Machine::timerCallback(const ros::TimerEvent& event){
 
 		double time_lasts = target_time - ros::Time::now().toSec();
 
-		if( target_recieved && joy.buttons[PS3_BUTTON_ACTION_CIRCLE] && time_lasts > -1.0 ){	//Automatic Mode
+		if( target_recieved && joy.buttons[PS3_BUTTON_ACTION_CIRCLE] && time_lasts > -0.2 ){	//Automatic Mode
 			float diff_x = target_x - pose.position.x;
 			float diff_y = target_y - pose.position.y;
 
