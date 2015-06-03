@@ -30,8 +30,8 @@ racket_length = 0.480
 
 mode = 0
 
-home_x = 0.9
-home_y = -3.5
+home_x = 1.5
+home_y = -3.9
 home_z = 0
 
 def publishHome():
@@ -62,8 +62,8 @@ def getTransformMatrixToRacketCoordinate():
         ])
     A =  np.mat([
          [1,0,0,0],
-         [0,1,0,0.6],
-         [0,0,1,-0.9],
+         [0,1,0,0.8],
+         [0,0,1,-1.0],
          [0,0,0,1]
         ])
     return A*Rt*R
@@ -83,6 +83,11 @@ def predictOrbit(mu):
     msg.point.y = k.mu[1]
     msg.point.z = k.mu[2]
     shuttlePub.publish(msg)
+    
+    if t[0,0] > 0:
+        rightPub.publish( std_msgs.msg.Bool(True) )
+    else:
+        rightPub.publish( std_msgs.msg.Bool(False) )
     
     if k.mu[4] > 0:
         #rospy.logwarn('Already recieved')
@@ -184,6 +189,7 @@ if __name__ == '__main__':
     pointPub = rospy.Publisher('/robot/targetpoint', PointStamped, queue_size=1)
     shuttlePub = rospy.Publisher('/shuttle/now', PointStamped, queue_size=1)
     swingPub = rospy.Publisher('/auto/swing', std_msgs.msg.Float32, queue_size=1)
+    rightPub = rospy.Publisher('/auto/isright', std_msgs.msg.Bool, queue_size=1)
     
     rospy.Timer(rospy.Duration(0.02), time_callback)
     

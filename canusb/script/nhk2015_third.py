@@ -114,13 +114,20 @@ def modeCallback(msg):
     global mode
     mode = msg.data
     
+def isrightCallback(msg):
+    global isright
+    isright = msg.data
+    
 def autoSwingCallback(msg):
     if mode ==2:
         send = CAN()
     	send.stdId = 0x150
     	send.extId = -1
     	if msg.data:
-        	send.data = [0xff]
+            if isright == True:
+                send.data = [0xfb]
+            else:
+                send.data = [0xfe]
     	else:
         	send.data = [0x00]
         pub.publish( send )
@@ -160,6 +167,9 @@ if __name__ == '__main__':
     mode = 0
     rospy.Subscriber("/robot/mode", std_msgs.msg.Int32, modeCallback)
     rospy.Subscriber("/auto/swing", std_msgs.msg.Float32, autoSwingCallback)
+    
+    isright = False
+    rospy.Subscriber("/auto/isright", std_msgs.msg.Bool, isrightCallback)
     
     rospy.spin()
     
