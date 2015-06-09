@@ -30,6 +30,27 @@ This project contains following nodes.
 * deadreckoning - Estimate a pose using two rotary encoders and a gyro sensor. This node also integrates poses published from laser2location using complementary filter.
 * robominton - Calculate the best pose
 
+![rosgraph](http://www.fortefibre.net/robots/2015/rosgraph.png)
+
+# Log file
+[DOWNLOAD](http://www.fortefibre.net/robots/2015/2015-05-24-12-22-43.bag)
+
+[![](http://img.youtube.com/vi/iEYQ2zMrW6Y/0.jpg)](https://www.youtube.com/watch?v=iEYQ2zMrW6Y)
+
+## How to play
+
+```Bash
+roslaunch robominton debug.launch
+```
+
+then
+
+```Bash
+rosbag play 2015-05-24-12-22-43.bag
+```
+
+
+
 # ロボットの動かし方
 
 ## PCの接続
