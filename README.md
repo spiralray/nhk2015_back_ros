@@ -1,5 +1,34 @@
-NHK2015 ROS programs for back players
+ABU Robocon 2015 ROS programs
 =================
+
+[![](http://img.youtube.com/vi/TP8qb9XdHgs/0.jpg)](https://www.youtube.com/watch?v=TP8qb9XdHgs)
+
+# Required devices
+* Kinect V2 (To detect shuttles)
+* UTM-30LX (To detect a pose of the robot using fences)
+* LAWICEL CANUSB (To communicate with microcomputers)
+* DUALSHOCK 3
+
+# System requirements
+* Ubuntu 14.04
+* ROS Indigo
+* Intel Core i7 (Quad core recommended)
+
+# Required softwares
+
+* [libfreenect2](https://github.com/OpenKinect/libfreenect2)
+* [Sixaxis](https://help.ubuntu.com/community/Sixaxis)
+
+# ROS nodes
+
+This project contains following nodes.
+
+* kinectv2 - Publish KinectV2 depth images
+* shuttle_finder - Detect a shuttle from KinectV2 depth images
+* shuttle_kalman - Estimate trajectory of a shuttle using Extended Kalman filter(EKF)
+* laser2location - Detect a pose of the robot using LRF
+* deadreckoning - Estimate a pose using two rotary encoders and a gyro sensor. This node also integrates poses published from laser2location using complementary filter.
+* robominton - Calculate the best pose
 
 # ロボットの動かし方
 
@@ -16,6 +45,7 @@ NHK2015 ROS programs for back players
 ```Bash
 sixad -start
 ```
+
 として、コントローラのPSボタンを押す。
 
 * BluetoothのドングルをUSBポートにあらかじめさしておくこと
