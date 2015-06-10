@@ -107,9 +107,10 @@ Ctrl+Cでプログラムを停止し、エラー内容に従って各デバイ�
 * グラナイトのラケットが引き絞られ、自動で下向きに回転するはず。
 * 引き絞られた後に下向きに回転しない時は、ラケット付近に付いているメイン基板のリセットスイッチを押す。
 
-# トラブルシューティング
-## 画面が固まった
-1. Ctrl + Alt + F3
-2. Ctrl + Alt + F7
+#LICENSE
 
-これで直らなかったら強制再起動
+Copyright (c) 2015 Kentaro Tanaka
+
+http://spiralray.net/
+
+Released under the MIT license
