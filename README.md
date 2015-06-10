@@ -18,6 +18,7 @@ ABU Robocon 2015 ROS programs
 
 * [libfreenect2](https://github.com/OpenKinect/libfreenect2)
 * [Sixaxis](https://help.ubuntu.com/community/Sixaxis)
+* [ros_kinectv2](https://github.com/spiralray/ros_kinectv2)
 
 # ROS nodes
 
