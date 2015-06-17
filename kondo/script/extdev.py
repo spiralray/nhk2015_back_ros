@@ -14,7 +14,7 @@ roslib.load_manifest("kondo");
 
 import rospy
 import std_msgs.msg
-from _servo import servo
+from kondo.msg import servo
 
 import serial
 import struct
@@ -24,12 +24,11 @@ import math
 
 def callback(msg):
     kinect.publish( std_msgs.msg.Float32(-msg.angle ) )
-    
+
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('servonhk')
-    
+
     kinect = rospy.Publisher('/kinect/angle', std_msgs.msg.Float32, queue_size=1)
     rospy.Subscriber("/servo/rx", servo, callback)
     rospy.spin()
-    
