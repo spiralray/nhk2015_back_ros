@@ -13,9 +13,9 @@ clone this project into ~/catkin_ws/src
 
     rosparam set /canusb/baud 500k #Set 500Kbps
     rosparam set /canusb/port /dev/ttyUSB0 #Set CANUSB port
-    rosrun canusb canusb.py
+    rosrun canusb canusb_node.py
 
-This node publish received messages on "/canrx". 
+This node publish received messages on "/canrx".
 
     rostopic echo /canrx
 
@@ -48,4 +48,3 @@ You can choose baudrate using rosparam.
 Sample of transmitting CAN messages
 
     rosrun canusb test.py
-

@@ -1,5 +1,5 @@
 <launch>
   <param name="/kondo/port" value="/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A901NUK9-if00-port0" />
-  <node name="kondo" pkg="kondo" type="kondo.py" />
+  <node name="kondo" pkg="kondo" type="kondo_node.py" />
   <node name="kondo_ext" pkg="kondo" type="extdev.py" />
 </launch>

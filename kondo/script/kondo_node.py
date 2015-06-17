@@ -13,7 +13,7 @@ import roslib
 roslib.load_manifest("kondo");
 
 import rospy
-from _servo import servo
+from kondo.msg import servo
 
 import serial
 import struct
@@ -35,25 +35,25 @@ def callback(msg):
     try:
         pubmsg.angle = (k.setAngle(msg.id, 7500 + msg.angle/(0.000589049) )-7500) * (0.000589049)
         pub.publish( pubmsg )
-        
+
     except:
         rospy.logerr("Communication error")
-    
+
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('kondo')
-    
+
     try:
         port = rospy.get_param('~port')
         rospy.loginfo('Parameter %s has value %s', rospy.resolve_name('~port'), port)
     except:
         rospy.logerr("Set correct port to %s", rospy.resolve_name('~port'))
         exit()
-    
+
     k = kondo(port, 115200, timeout=0.15, parity=serial.PARITY_EVEN, stopbits=serial.STOPBITS_ONE)
-    
+
     pub = rospy.Publisher('/servo/rx', servo, queue_size=100)
     rospy.Subscriber("/servo/tx", servo, callback)
     rospy.spin()
-    
+
     k.close()

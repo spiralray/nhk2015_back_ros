@@ -14,7 +14,7 @@ roslib.load_manifest("canusb");
 
 import struct
 import rospy
-from _CAN import CAN
+from canusb.msg import CAN
 
 import serial
 import time
@@ -31,15 +31,15 @@ def talker():
         msg.extId = -1
         msg.data = struct.pack('B', count%256) + 'ABCDE'
         pub.publish( msg )
-        
+
         msg = CAN()
         msg.stdId = 100
         msg.extId = 25
         msg.data = struct.pack('i', count)
         pub.publish( msg )
-        
+
         count += 1
-        
+
         r.sleep()
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ roslib.load_manifest("kondo");
 
 import rospy
 import std_msgs.msg
-from _servo import servo
+from kondo.msg import servo
 
 import serial
 import struct
@@ -47,15 +47,14 @@ def timer_callback(msg):
 if __name__ == '__main__':
     argv = rospy.myargv(sys.argv)
     rospy.init_node('servonhk')
-    
+
     kinect = rospy.Publisher('/kinect/angle', std_msgs.msg.Float32, queue_size=1)
     #rospy.Subscriber("/kinect/targetangle", std_msgs.msg.Float32, targetCallback)
     rospy.Subscriber("/servo/rx", servo, callback)
-    
+
     high=False
     rospy.Subscriber("/kinect/high", std_msgs.msg.Bool, highCallback)
     s = rospy.Publisher('/servo/tx', servo, queue_size=1)
 
     rospy.Timer(rospy.Duration(0.03), timer_callback)
     rospy.spin()
-    

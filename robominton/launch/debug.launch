@@ -1,16 +1,16 @@
 <launch>
-  
+
   <node name="canusb_nhk2015" pkg="canusb" type="nhk2015_back.py" />
-  
+
   <include file="$(find laser2location)/launch/laser.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
 
   <param name="/shuttle_finder/debug" value="true" />
   <include file="$(find shuttle_finder)/launch/shuttle_finder.launch"/>
-  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
+  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman_node.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
-  
+
   <node name="manual" pkg="robominton" type="manual" />
   <node name="arm_pose" pkg="robominton" type="arm_pose.py" />
   <node name="arm_disp" pkg="robominton" type="arm_disp.py" />

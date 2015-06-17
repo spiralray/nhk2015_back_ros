@@ -3,7 +3,7 @@
   <node name="joy" pkg="joy" type="joy_node" />
   <node name="hokuyo_node" pkg="hokuyo_node" type="hokuyo_node" />
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
-  
+
 
   <include file="$(find laser2location)/launch/third.launch"/>
   <node name="laser_disp" pkg="laser2location" type="laser_disp" />
@@ -13,9 +13,9 @@
 
   <param name="/shuttle_finder/debug" value="false" />
   <include file="$(find shuttle_finder)/launch/third.launch"/>
-  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
+  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman_node.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
-  
+
   <node name="third_pose" pkg="robominton" type="third.py" />
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
 
@@ -25,6 +25,6 @@
 
   <param name="/servonhk/angle" value="1.0" />
   <node name="servonhk" pkg="kondo" type="nhk2015.py" />
-  
+
 
 </launch>

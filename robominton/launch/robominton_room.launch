@@ -1,8 +1,8 @@
 <launch>
-  
+
   <include file="$(find canusb)/launch/canusb.launch"/>
   <node name="canusb_nhk2015" pkg="canusb" type="nhk2015_back.py" />
-  
+
   <node name="hokuyo_node" pkg="hokuyo_node" type="hokuyo_node" />
   <include file="$(find laser2location)/launch/laser.launch"/>
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
@@ -15,9 +15,9 @@
   <node name="kinectv2" pkg="kinectv2" type="kinectv2" />
   <param name="/shuttle_finder/debug" value="false" />
   <include file="$(find shuttle_finder)/launch/shuttle_finder_room.launch"/>
-  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
+  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman_node.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
-  
+
   <node name="joy" pkg="joy" type="joy_node" />
   <node name="manual" pkg="robominton" type="manual" />
   <node name="arm_pose" pkg="robominton" type="arm_pose.py" />
