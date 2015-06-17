@@ -7,12 +7,16 @@ Created on 2015/02/11
 @author: spiralray
 '''
 
+# add path to shuttle.py (ugly hack...
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../shuttle_kalman/scripts')
+
 import shuttle
 
 import numpy as np
 import copy
 
-import sys
 import roslib
 import rospy
 import tf
@@ -26,6 +30,7 @@ from geometry_msgs.msg import PointStamped
 from visualization_msgs.msg import Marker
 
 import math
+
 
 racket_length = 0.480
 
