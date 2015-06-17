@@ -7,11 +7,11 @@
 
   <param name="/shuttle_finder/debug" value="true" />
   <include file="$(find shuttle_finder)/launch/third.launch"/>
-  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman.py" />
+  <node name="shuttle_kalman" pkg="shuttle_kalman" type="shuttle_kalman_node.py" />
   <node name="shuttle_kalman_disp" pkg="shuttle_kalman" type="display.py" />
-  
+
   <node name="third_pose" pkg="robominton" type="third.py" />
   <include file="$(find deadreckoning)/launch/deadreckoning_with_laser.launch"/>
-  
+
 
 </launch>
